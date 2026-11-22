@@ -1,0 +1,25 @@
+[theme]
+base = "dark"
+# Screening room: velvet curtain, brass rails, projector light.
+backgroundColor = "#1C0F17"           # velvet
+secondaryBackgroundColor = "#2A1722"  # curtain
+borderColor = "#45293A"               # seam
+primaryColor = "#D9A956"              # brass
+textColor = "#F2E8DA"                 # projector light
+linkColor = "#D9A956"
+
+# Newsreader: a newspaper-critic serif built for screens (headings and text).
+font = "Newsreader:https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&display=swap"
+headingFont = "Newsreader"
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+baseFontSize = 17
+# Archivo is loaded through codeFont, but only used for signage in ui.py:
+# the CRITIQ marquee, ticket-stub ratings and match badges.
+codeFont = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap"
+
+baseRadius = "6px"
+buttonRadius = "4px"
+showWidgetBorder = true
+
+[client]
+toolbarMode = "minimal"
