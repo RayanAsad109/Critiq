@@ -402,19 +402,25 @@ EFFECTS_CSS = """
   animation: cq-sweep 1s linear .9s infinite;
 }
 @keyframes cq-sweep { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+/* 3, 2, 1 plays exactly once (0.7s each, starting at 1.0s) and ends at 3.1s.
+   COUNTDOWN_END in app.py must match, so the curtains never open mid-count. */
 .cq-leader-num span {
   position: absolute; inset: 0; display: grid; place-items: center; opacity: 0;
   font-family: var(--sign); font-weight: 900; font-size: 6.5rem; color: var(--light);
-  animation: cq-count 3s steps(1) infinite;
+  animation: cq-count .7s linear forwards;
 }
-.cq-leader-num span:nth-child(1) { animation-delay: .9s; }
-.cq-leader-num span:nth-child(2) { animation-delay: 1.9s; }
-.cq-leader-num span:nth-child(3) { animation-delay: 2.9s; }
-@keyframes cq-count { 0% { opacity: 1; } 33.3% { opacity: 0; } 100% { opacity: 0; } }
+.cq-leader-num span:nth-child(1) { animation-delay: 1.0s; }
+.cq-leader-num span:nth-child(2) { animation-delay: 1.7s; }
+.cq-leader-num span:nth-child(3) { animation-delay: 2.4s; }
+@keyframes cq-count { 0% { opacity: 1; } 99.9% { opacity: 1; } 100% { opacity: 0; } }
 .cq-leader-cap {
   position: absolute; z-index: 2; top: calc(50% + 140px); left: 0; right: 0; text-align: center;
-  color: var(--usher); font-style: italic; font-size: 1.1rem; opacity: 0; animation: cq-fade .3s ease 1s forwards;
+  color: var(--usher); font-style: italic; font-size: 1.1rem;
 }
+.cq-leader-cap span { position: absolute; left: 0; right: 0; opacity: 0; }
+.cq-leader-cap .a { animation: cq-cap-a 3.1s linear both; }      /* shown during the count */
+.cq-leader-cap .b { animation: cq-fade .4s ease 4s both; }        /* only if loading runs long */
+@keyframes cq-cap-a { 0%, 30% { opacity: 0; } 32%, 99% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes cq-fade { to { opacity: 1; } }
 
 /* curtains part to reveal the results */
@@ -456,7 +462,8 @@ a.cq-btnlink {
 @media (prefers-reduced-motion: reduce) {
   .cq-curtain, .cq-leader-sweep, .cq-leader-num span { animation: none !important; }
   .cq-lights .cq-curtain { transform: none; }
-  .cq-leader-num span:nth-child(1) { opacity: 1; }
+  .cq-leader-num span:nth-child(3) { opacity: 1; }
+  .cq-leader-cap .a { animation: none !important; opacity: 1; }
   .cq-reveal { display: none; }
   .cq-reel-strip { animation-duration: .01s !important; }
 }
@@ -469,7 +476,8 @@ def lights_down_html(caption: str = "Finding your next watch") -> str:
             '<div class="cq-curtain l"></div><div class="cq-curtain r"></div>'
             '<div class="cq-leader"><div class="cq-leader-sweep"></div>'
             '<div class="cq-leader-num"><span>3</span><span>2</span><span>1</span></div></div>'
-            f'<div class="cq-leader-cap">{escape(caption)}</div></div>')
+            f'<div class="cq-leader-cap"><span class="a">{escape(caption)}</span>'
+            '<span class="b">Threading the reel…</span></div></div>')
 
 
 def curtain_reveal_html() -> str:
@@ -705,3 +713,120 @@ def atmosphere_html(backdrop: str | None = None) -> str:
     return (f'<div class="cq-atmos" aria-hidden="true">{ambient}<div class="cq-tint"></div>'
             f'<div class="cq-beam"></div><div class="cq-lamp"></div><div class="cq-dust">{dust}</div>'
             f'<div class="cq-vignette"></div></div><div class="cq-grain" aria-hidden="true"></div>')
+
+
+# =====================================================================
+# Sign-in: a cinema ticket in front of a slowly drifting wall of this
+# week's trending posters.
+# =====================================================================
+SIGNIN_CSS = """
+<style>
+.cq-wall { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; padding: 0 14px;
+  transform: rotate(-4deg) scale(1.15); }
+.cq-wall-col { display: flex; flex-direction: column; gap: 14px; animation: cq-drift 140s linear infinite; }
+.cq-wall-col:nth-child(even) { animation-direction: reverse; margin-top: -90px; }
+.cq-wall-col:nth-child(3n) { animation-duration: 170s; }
+.cq-wall img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 6px; display: block;
+  filter: saturate(.75); }
+@keyframes cq-drift { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+.cq-wall-shade { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 48%, rgba(28,15,23,.55) 0%, rgba(28,15,23,.82) 72%, #1C0F17 100%),
+    rgba(28,15,23,.35); }
+
+.cq-door { position: relative; z-index: 1; min-height: 78vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.4rem; padding: 2rem 0; }
+.cq-ticket { --cut: 63%; display: flex; width: min(680px, 100%); color: #2A1722;
+  background: #F2E8DA; border-radius: 10px; box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  -webkit-mask: radial-gradient(circle 13px at var(--cut) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle 13px at var(--cut) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+          mask: radial-gradient(circle 13px at var(--cut) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle 13px at var(--cut) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+  animation: cq-arrive .7s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes cq-arrive { from { opacity: 0; transform: translateY(18px) rotate(-1.5deg); } }
+.cq-t-main { flex: 0 0 var(--cut); padding: 1.6rem 1.7rem 1.4rem; border-right: 2px dashed #B9A78F; }
+.cq-t-admit { font-family: var(--sign); font-weight: 700; font-size: .72rem; letter-spacing: .32em;
+  color: #8A5A12; }
+.cq-t-name { font-family: var(--sign); font-weight: 900; font-stretch: 75%; font-size: 3.6rem;
+  line-height: .95; letter-spacing: .06em; color: #2A1722; margin: .35rem 0 .4rem; }
+.cq-t-line { font-style: italic; font-size: 1.05rem; color: #5A4250; margin: 0 0 1.2rem; }
+.cq-t-facts { display: flex; flex-wrap: wrap; gap: .6rem 1.6rem; border-top: 1px solid #D8C8B2; padding-top: .8rem; }
+.cq-t-fact span { display: block; font-family: var(--sign); font-size: .66rem; font-weight: 700;
+  letter-spacing: .14em; color: #8A7480; }
+.cq-t-fact b { font-family: var(--sign); font-weight: 700; font-size: 1rem; color: #2A1722; white-space: nowrap; }
+.cq-t-stub { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .7rem; padding: 1.2rem .9rem; text-align: center; min-width: 0; transition: transform .25s ease; transform-origin: left center; }
+.cq-ticket:hover .cq-t-stub { transform: rotate(2.5deg) translateX(3px); }
+.cq-t-tear { font-family: var(--sign); font-size: .66rem; font-weight: 700; letter-spacing: .14em; color: #8A7480; }
+a.cq-google { display: inline-flex; align-items: center; gap: .55rem; background: #fff; color: #1f1f1f !important;
+  text-decoration: none !important; font-family: Roboto, Arial, sans-serif; font-size: .92rem; font-weight: 500;
+  padding: .55rem .85rem; border-radius: 999px; border: 1px solid #D8C8B2; white-space: nowrap;
+  transition: box-shadow .2s ease, transform .2s ease; }
+a.cq-google:hover { box-shadow: 0 4px 14px rgba(42,23,34,.25); transform: translateY(-1px); }
+a.cq-google:focus-visible { outline: 3px solid #D9A956; outline-offset: 3px; }
+.cq-google .cq-g { width: 18px; height: 18px; flex: none; }
+.cq-t-note { font-size: .78rem; color: #8A7480; line-height: 1.35; max-width: 11rem; }
+.cq-door-link { font-size: .95rem; }
+.cq-door-link a { color: var(--usher) !important; }
+.cq-door-link a:hover { color: var(--light) !important; }
+
+@media (max-width: 640px) {
+  .cq-wall { grid-template-columns: repeat(4, 1fr); }
+  .cq-ticket { --cut: 100%; flex-direction: column; -webkit-mask: none; mask: none; }
+  .cq-t-main { border-right: 0; border-bottom: 2px dashed #B9A78F; }
+  .cq-t-name { font-size: 2.8rem; }
+  .cq-t-facts { gap: .6rem 1.2rem; }
+  .cq-ticket:hover .cq-t-stub { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cq-wall-col, .cq-ticket { animation: none; }
+  .cq-t-stub, a.cq-google { transition: none; }
+}
+</style>
+"""
+
+_G_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
+            '<path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/>'
+            '<path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/>'
+            '<path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.6 10.7l7.9-6.1z"/>'
+            '<path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.2-13.5-10l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>')
+# st.html strips inline <svg>, so the Google "G" goes in as an image
+GOOGLE_G = ('<img class="cq-g" alt="" src="data:image/svg+xml,'
+            + __import__("urllib.parse", fromlist=["quote"]).quote(_G_SVG, safe="") + '">')
+
+
+def signin_html(posters: list[str], date_label: str, seat: str, href: str,
+                invited: bool = False) -> str:
+    """The logged-out page. `posters` are image URLs for the wall (may be empty)."""
+    wall = ""
+    if posters:
+        cols = 7
+        col_html = []
+        for c in range(cols):
+            mine = posters[c::cols] or posters
+            mine = (mine * 4)[:6]                       # same length per column
+            imgs = "".join(f'<img src="{escape(u)}" alt="" loading="lazy">' for u in mine * 2)
+            col_html.append(f'<div class="cq-wall-col">{imgs}</div>')
+        wall = f'<div class="cq-wall" aria-hidden="true">{"".join(col_html)}</div>'
+    show = "Movie night for two" if invited else "Your next watch"
+    line = ("You've been invited. Sign in and Critiq finds something you'll both enjoy."
+            if invited else "Write it down. We'll take it from there.")
+    return (
+        f'{wall}<div class="cq-wall-shade"></div>'
+        '<div class="cq-door"><div class="cq-ticket" role="group" aria-label="Critiq admission ticket">'
+        '<div class="cq-t-main"><div class="cq-t-admit">ADMIT ONE</div>'
+        '<div class="cq-t-name">CRITIQ</div>'
+        f'<p class="cq-t-line">{escape(line)}</p>'
+        '<div class="cq-t-facts">'
+        f'<div class="cq-t-fact"><span>DATE</span><b>{escape(date_label)}</b></div>'
+        f'<div class="cq-t-fact"><span>SHOWING</span><b>{escape(show)}</b></div>'
+        f'<div class="cq-t-fact"><span>SEAT</span><b>{escape(seat)}</b></div>'
+        '</div></div>'
+        '<div class="cq-t-stub"><div class="cq-t-tear">TEAR HERE</div>'
+        f'<a class="cq-google" href="{escape(href)}" target="_self">{GOOGLE_G}Sign in with Google</a>'
+        '<div class="cq-t-note">Your ratings stay with your Google account, on every device.</div>'
+        '</div></div>'
+        '<div class="cq-door-link"><a href="https://rayanasad109.github.io/Critiq/" target="_blank" '
+        'rel="noopener">New here? See what Critiq does</a></div></div>'
+    )

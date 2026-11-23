@@ -89,6 +89,17 @@ def get_store() -> Store:
     return Store(get_secret("DATABASE_URL") or None)
 
 
+@st.cache_data(ttl=12 * 3600, show_spinner=False)
+def signin_posters(key: str) -> list[str]:
+    """Poster URLs for the sign-in wall: this week's trending titles."""
+    if not key:
+        return []
+    try:
+        return [t["poster"] for t in TMDB(key).trending(limit=28) if t.get("poster")]
+    except Exception:
+        return []
+
+
 @st.cache_resource
 def rec_memory() -> dict:
     """Last recommendations per user (and per movie night), kept in server memory so
@@ -167,20 +178,16 @@ def part_of_day() -> str:
 
 # ------------------------------------------------------------------- login
 if auth_configured():
-    if not st.user.is_logged_in and qp.get("signin") and not qp.get("with"):
-        st.login()             # arriving from the landing page: go straight to Google
+    if not st.user.is_logged_in and qp.get("signin"):
+        st.login()             # the ticket (or the landing page) links here: go straight to Google
     if not st.user.is_logged_in:
-        st.html(ui.header_html())
-        st.write("")
-        if qp.get("with"):
-            st.markdown("**You've been invited to a movie night.** Sign in and Critiq will find "
-                        "something you'll both enjoy.")
-        else:
-            st.markdown("Keep a running log of everything you watch, in your own words, "
-                        "and let it pick what's next. Sign in to keep your ratings on every device.")
-        st.button("Sign in with Google", type="primary", on_click=st.login)
-        st.markdown("[New here? See what Critiq does](https://rayanasad109.github.io/Critiq/)")
-        footer()
+        st.html(ui.SIGNIN_CSS)
+        today = date.today()
+        seat = f"{'DEFGHJK'[today.toordinal() % 7]}{today.toordinal() % 17 + 4}"
+        href = "?" + urlencode({"with": qp["with"], "signin": 1} if qp.get("with") else {"signin": 1})
+        st.html(ui.signin_html(signin_posters(get_secret("TMDB_API_KEY")),
+                               today.strftime("%a %d %b"), seat, href, invited=bool(qp.get("with"))))
+        st.html(ui.FOOTER)
         st.stop()
     if "signin" in qp:
         del qp["signin"]
