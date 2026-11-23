@@ -30,6 +30,7 @@ st.html(ui.CSS)
 st.html(ui.EFFECTS_CSS)
 st.html(ui.HOME_CSS)
 st.html(ui.ATMOS_CSS)
+st.html(ui.WALL_CSS)
 st.html(ui.POLISH_CSS)
 
 # Which film tints the page background. Pages set this as they render; the
@@ -42,8 +43,34 @@ def ambient(t: dict | None):
         AMBIENT["backdrop"] = t["backdrop"]
 
 
-def footer():
-    st.html(ui.atmosphere_html(AMBIENT["backdrop"]) + ui.FOOTER)
+def footer(wall: list[str] | None = None):
+    """The page background and the TMDB credit. A details page keeps its film's backdrop
+    atmosphere; the signed-in pages pass `wall` and get the faint poster wall instead."""
+    if wall is None:
+        st.html(ui.atmosphere_html(AMBIENT["backdrop"]) + ui.FOOTER)
+    else:
+        st.html(ui.app_wall_html(wall) + ui.FOOTER)
+
+
+WALL_MIN = 12       # fewer of the user's own posters than this: top up with trending
+
+
+def wall_posters(own: list[dict], key: str) -> list[str]:
+    """Posters for the signed-in wall: the user's rated and saved titles, then this week's
+    trending ones until there are WALL_MIN."""
+    seen, out = set(), []
+    for t in own:
+        url = t.get("poster")
+        if url and url not in seen:
+            seen.add(url)
+            out.append(url)
+    for url in (signin_posters(key) if len(out) < WALL_MIN else []):
+        if len(out) >= WALL_MIN:
+            break
+        if url not in seen:
+            seen.add(url)
+            out.append(url)
+    return out
 
 GRID = 6            # posters per row in Rate / Library / More like this
 REC_GRID = 4        # wider cards for recommendations (they carry reasons)
@@ -1083,4 +1110,4 @@ if page == "Movie night":
                 spin_button([p.title for p in picks], [p.score for p in picks], "spin-night")
                 rec_grid(as_recs, "night", fit=fit, friend_name=friend_name)
 
-footer()
+footer(wall=wall_posters([w["title"] for w in watched] + [w["title"] for w in watchlist], api_key))

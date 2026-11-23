@@ -901,20 +901,64 @@ a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-
 
 
 # =====================================================================
+# Poster wall: slowly drifting columns of posters, tilted. Full strength
+# behind the sign-in ticket; faint, blurred and fading out down the screen
+# behind the signed-in pages (built from the user's own titles).
+# =====================================================================
+WALL_CSS = """
+<style>
+.cq-wall { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; padding: 0 14px;
+  transform: rotate(-4deg) scale(1.15); }
+.cq-wall-col { display: flex; flex-direction: column; gap: 14px; animation: cq-wall-drift 140s linear infinite; }
+.cq-wall-col:nth-child(even) { animation-direction: reverse; margin-top: -90px; }
+.cq-wall-col:nth-child(3n) { animation-duration: 170s; }
+.cq-wall img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 6px; display: block;
+  filter: saturate(.75); }
+@keyframes cq-wall-drift { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+
+/* signed-in pages: the same wall, much fainter, softened, and gone by the bottom of the screen.
+   The holder is fixed behind everything and takes no clicks; the fade is on the holder (not the
+   tilted wall) so it runs straight down the screen. */
+.cq-wall-app { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+  opacity: .13; filter: blur(3px);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 50%, transparent 100%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 50%, transparent 100%); }
+.cq-wall-app .cq-wall { position: absolute; z-index: auto; }
+
+@media (max-width: 640px) { .cq-wall { grid-template-columns: repeat(4, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .cq-wall-col { animation: none; } }
+</style>
+"""
+
+
+def poster_wall_html(posters: list[str], cols: int = 7) -> str:
+    """Columns of posters for the wall; each column repeats its set so the drift loops seamlessly."""
+    if not posters:
+        return ""
+    col_html = []
+    for c in range(cols):
+        mine = posters[c::cols] or posters
+        mine = (mine * 4)[:6]                       # same length per column
+        imgs = "".join(f'<img src="{escape(u)}" alt="" loading="lazy">' for u in mine * 2)
+        col_html.append(f'<div class="cq-wall-col">{imgs}</div>')
+    return f'<div class="cq-wall" aria-hidden="true">{"".join(col_html)}</div>'
+
+
+def app_wall_html(posters: list[str]) -> str:
+    """The faint wall behind the signed-in pages, with the film grain on top as before."""
+    small = [u.replace("/w342/", "/w185/") for u in posters]    # faint and blurred: small files do
+    wall = poster_wall_html(small)
+    holder = f'<div class="cq-wall-app" aria-hidden="true">{wall}</div>' if wall else ""
+    return f'{holder}<div class="cq-grain" aria-hidden="true"></div>'
+
+
+# =====================================================================
 # Sign-in: a cinema ticket in front of a slowly drifting wall of this
 # week's trending posters.
 # =====================================================================
 SIGNIN_CSS = """
 <style>
-.cq-wall { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
-  display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; padding: 0 14px;
-  transform: rotate(-4deg) scale(1.15); }
-.cq-wall-col { display: flex; flex-direction: column; gap: 14px; animation: cq-drift 140s linear infinite; }
-.cq-wall-col:nth-child(even) { animation-direction: reverse; margin-top: -90px; }
-.cq-wall-col:nth-child(3n) { animation-duration: 170s; }
-.cq-wall img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 6px; display: block;
-  filter: saturate(.75); }
-@keyframes cq-drift { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 .cq-wall-shade { position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
     radial-gradient(ellipse 60% 55% at 50% 48%, rgba(28,15,23,.55) 0%, rgba(28,15,23,.82) 72%, #1C0F17 100%),
@@ -957,7 +1001,6 @@ a.cq-google:focus-visible { outline: 3px solid #D9A956; outline-offset: 3px; }
 .cq-door-link a:hover { color: var(--light) !important; }
 
 @media (max-width: 640px) {
-  .cq-wall { grid-template-columns: repeat(4, 1fr); }
   .cq-ticket { --cut: 100%; flex-direction: column; -webkit-mask: none; mask: none; }
   .cq-t-main { border-right: 0; border-bottom: 2px dashed #B9A78F; }
   .cq-t-name { font-size: 2.8rem; }
@@ -965,7 +1008,7 @@ a.cq-google:focus-visible { outline: 3px solid #D9A956; outline-offset: 3px; }
   .cq-ticket:hover .cq-t-stub { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cq-wall-col, .cq-ticket { animation: none; }
+  .cq-ticket { animation: none; }
   .cq-t-stub, a.cq-google { transition: none; }
 }
 </style>
@@ -984,16 +1027,7 @@ GOOGLE_G = ('<img class="cq-g" alt="" src="data:image/svg+xml,'
 def signin_html(posters: list[str], date_label: str, seat: str, href: str,
                 invited: bool = False) -> str:
     """The logged-out page. `posters` are image URLs for the wall (may be empty)."""
-    wall = ""
-    if posters:
-        cols = 7
-        col_html = []
-        for c in range(cols):
-            mine = posters[c::cols] or posters
-            mine = (mine * 4)[:6]                       # same length per column
-            imgs = "".join(f'<img src="{escape(u)}" alt="" loading="lazy">' for u in mine * 2)
-            col_html.append(f'<div class="cq-wall-col">{imgs}</div>')
-        wall = f'<div class="cq-wall" aria-hidden="true">{"".join(col_html)}</div>'
+    wall = poster_wall_html(posters)
     show = "Movie night for two" if invited else "Your next watch"
     line = ("You've been invited. Sign in and Critiq finds something you'll both enjoy."
             if invited else "Write it down. We'll take it from there.")
