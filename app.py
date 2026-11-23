@@ -47,7 +47,10 @@ def footer():
 GRID = 6            # posters per row in Rate / Library / More like this
 REC_GRID = 4        # wider cards for recommendations (they carry reasons)
 PAGES = ["Home", "Rate", "Library", "Discover", "Movie night"]
-MIN_SHOW_SECONDS = 2.6   # let the 3-2-1 countdown play at least once
+# The 3-2-1 ends 3.1s after the overlay appears (see .cq-leader-num in ui.py). The extra
+# 0.4s covers the time it takes the browser to receive and draw the overlay.
+COUNTDOWN_END = 3.1
+MIN_SHOW_SECONDS = COUNTDOWN_END + 0.4
 
 # One-tap moods on the home page: (what to look for, genres, movies/shows)
 MOODS = {
@@ -164,6 +167,8 @@ def part_of_day() -> str:
 
 # ------------------------------------------------------------------- login
 if auth_configured():
+    if not st.user.is_logged_in and qp.get("signin") and not qp.get("with"):
+        st.login()             # arriving from the landing page: go straight to Google
     if not st.user.is_logged_in:
         st.html(ui.header_html())
         st.write("")
@@ -174,8 +179,11 @@ if auth_configured():
             st.markdown("Keep a running log of everything you watch, in your own words, "
                         "and let it pick what's next. Sign in to keep your ratings on every device.")
         st.button("Sign in with Google", type="primary", on_click=st.login)
+        st.markdown("[New here? See what Critiq does](https://rayanasad109.github.io/Critiq/)")
         footer()
         st.stop()
+    if "signin" in qp:
+        del qp["signin"]
     user_id = st.user.email
     user_label = st.user.get("name") or user_id
 else:
