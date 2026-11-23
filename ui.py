@@ -716,6 +716,191 @@ def atmosphere_html(backdrop: str | None = None) -> str:
 
 
 # =====================================================================
+# Polish: motion and finish on top of the styles above, CSS only (st.html
+# strips scripts). Loaded last. Ideas borrowed from React Bits, done in CSS:
+#   BlurText    - headings sharpen into place
+#   AnimatedContent - poster grids rise in as they scroll into view
+#   TiltedCard / glare - posters lift and catch a sweep of light on hover
+#   ShinyText   - the home question and the match badges carry a slow sheen
+# Plus a frosted sticky nav, warmer buttons, inputs, dialogs and popovers.
+# No raw angle brackets in here: they get the whole <style> block stripped.
+# =====================================================================
+POLISH_CSS = """
+<style>
+html { scroll-behavior: smooth; }
+::selection { background: rgba(217,169,86,.35); color: var(--light); }
+* { scrollbar-width: thin; scrollbar-color: #5a3a4b transparent; }
+
+/* ---- BlurText: big headings sharpen into place ---- */
+.cq-ask, .cq-dtitle, .cq-feature-ask, .cq-feature-title, .cq-home .cq-ask-sub, .cq-reel-result .t {
+  animation: cq-blur-in .95s cubic-bezier(.2,.8,.2,1) both;
+}
+.cq-feature-title { animation-delay: .25s; }
+.cq-feature-label, .cq-feature-facts, .cq-feature-why, .cq-ask-sub { animation: cq-rise-in .8s cubic-bezier(.2,.8,.2,1) .35s both; }
+.cq-screen .cq-facts, .cq-screen .cq-chips { animation: cq-rise-in .8s cubic-bezier(.2,.8,.2,1) .3s both; }
+@keyframes cq-blur-in { from { opacity: 0; filter: blur(12px); transform: translateY(.35em); } to { opacity: 1; filter: blur(0); transform: none; } }
+@keyframes cq-rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* ---- ShinyText: a slow sheen across the home question ---- */
+.cq-ask {
+  background: linear-gradient(100deg, var(--light) 0%, var(--light) 40%, var(--bulb) 50%, var(--light) 60%, var(--light) 100%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: cq-blur-in .95s cubic-bezier(.2,.8,.2,1) both, cq-sheen 7s ease-in-out 1.2s infinite;
+}
+@keyframes cq-sheen { 0%, 55% { background-position: 100% 0; } 100% { background-position: -50% 0; } }
+
+/* ---- the feature screen and the details screen: a slow push-in on the backdrop ---- */
+.cq-feature, .cq-screen { background-size: cover; animation: cq-feature-in .9s cubic-bezier(.6,.05,.3,1), cq-push 24s ease-in-out 1s infinite alternate; }
+@keyframes cq-push { from { background-position: center 25%; } to { background-position: center 40%; } }
+.cq-feature { box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(217,169,86,.08); }
+
+/* ---- AnimatedContent: grid posters rise in as they enter the screen ---- */
+@supports (animation-timeline: view()) {
+  .cq-card { animation: cq-card-in linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+  @keyframes cq-card-in { from { opacity: 0; transform: translateY(40px) scale(.96); } to { opacity: 1; transform: none; } }
+}
+/* never inside the reel: its strip moves through a clipped window, so view() would keep them hidden */
+.cq-reel-strip .cq-card { animation: none !important; opacity: 1; transform: none; }
+/* film strips: items deal in one after another on load */
+.cq-strip-item { animation: cq-rise-in .7s cubic-bezier(.2,.8,.2,1) both; }
+.cq-strip-item:nth-child(2) { animation-delay: .05s; } .cq-strip-item:nth-child(3) { animation-delay: .1s; }
+.cq-strip-item:nth-child(4) { animation-delay: .15s; } .cq-strip-item:nth-child(5) { animation-delay: .2s; }
+.cq-strip-item:nth-child(6) { animation-delay: .25s; } .cq-strip-item:nth-child(7) { animation-delay: .3s; }
+.cq-strip-item:nth-child(n+8) { animation-delay: .35s; }
+
+/* ---- TiltedCard + glare: posters lift and catch light on hover ---- */
+.cq-card { border-radius: 6px; transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease; }
+.cq-card .cq-poster { transition: border-color .3s ease, filter .45s ease; }
+.cq-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: 6px; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,246,225,.28) 50%, transparent 65%);
+  background-size: 250% 100%; background-position: 130% 0; opacity: 0;
+  transition: background-position .8s cubic-bezier(.2,.8,.2,1), opacity .3s ease;
+}
+.cq-card .cq-stub, .cq-card .cq-match { z-index: 2; }
+a.cq-cardlink:hover .cq-card, a.cq-cardlink:focus-visible .cq-card {
+  transform: translateY(-6px) rotate(-.4deg) scale(1.02);
+  box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(217,169,86,.5), 0 0 30px rgba(217,169,86,.18);
+}
+a.cq-cardlink:hover .cq-card::after { opacity: 1; background-position: -30% 0; }
+a.cq-cardlink:hover .cq-poster { filter: brightness(1.06) saturate(1.08); }
+a.cq-strip-item .cq-poster { transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease, border-color .3s ease; }
+a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-shadow: 0 14px 30px rgba(0,0,0,.55), 0 0 22px rgba(217,169,86,.2); }
+.cq-strip { padding-top: 28px; }
+
+/* ---- match badges carry a slow sheen ---- */
+.cq-match, .cq-score-pill {
+  background-color: rgba(28,15,23,.88);
+  background-image: linear-gradient(100deg, transparent 46%, rgba(246,213,142,.22) 50%, transparent 54%);
+  background-size: 400% 100%; background-repeat: no-repeat; animation: cq-badge 5s ease-in-out infinite;
+}
+@keyframes cq-badge { 0%, 70% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.cq-reasons li { animation: cq-rise-in .6s cubic-bezier(.2,.8,.2,1) both; }
+.cq-reasons li:nth-child(2) { animation-delay: .08s; } .cq-reasons li:nth-child(3) { animation-delay: .16s; }
+
+/* ---- frosted sticky navigation ---- */
+.st-key-nav {
+  position: sticky; top: .6rem; z-index: 50; padding: .55rem .7rem; border-radius: 999px;
+  background: rgba(28,15,23,.62); border: 1px solid rgba(69,41,58,.8);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35); width: fit-content; max-width: 100%;
+}
+.st-key-nav button { transition: background-color .25s ease, border-color .25s ease, transform .2s ease, box-shadow .25s ease !important; }
+.st-key-nav button:hover { transform: translateY(-1px); }
+.st-key-nav button[aria-checked="true"], .st-key-nav button[kind="pillsActive"] {
+  box-shadow: 0 0 0 1px var(--brass), 0 6px 22px rgba(217,169,86,.35) !important;
+}
+
+/* ---- buttons: brass primary that glows, quiet secondary that lights its edge ---- */
+[data-testid="stBaseButton-primary"] {
+  background: linear-gradient(180deg, #E4B865, var(--brass)) !important; color: var(--velvet) !important;
+  border: 0 !important; font-weight: 600 !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 6px 18px rgba(217,169,86,.25);
+  transition: transform .2s ease, box-shadow .25s ease, filter .2s ease !important;
+}
+[data-testid="stBaseButton-primary"]:hover { transform: translateY(-2px); filter: brightness(1.05);
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 10px 28px rgba(217,169,86,.42); }
+[data-testid="stBaseButton-primary"]:active { transform: translateY(0) scale(.98); }
+[data-testid="stBaseButton-primary"] p, [data-testid="stBaseButton-primary"] span { color: var(--velvet) !important; }
+[data-testid="stBaseButton-secondary"], [data-testid="stPopover"] button {
+  background: rgba(42,23,34,.78) !important; border: 1px solid var(--seam) !important;
+  transition: transform .2s ease, border-color .25s ease, box-shadow .25s ease, background-color .25s ease !important;
+}
+[data-testid="stBaseButton-secondary"]:hover, [data-testid="stPopover"] button:hover {
+  border-color: var(--brass) !important; transform: translateY(-1px); background: rgba(58,32,48,.9) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35), 0 0 0 1px rgba(217,169,86,.25);
+}
+[data-testid="stBaseButton-secondary"]:active { transform: scale(.98); }
+.st-key-feature_actions [data-testid="stBaseButton-secondary"] {
+  background: rgba(28,15,23,.55) !important; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+
+/* ---- inputs, selects, sliders ---- */
+[data-baseweb="input"], [data-baseweb="textarea"], [data-baseweb="select"] div[data-baseweb] {
+  border-radius: 8px !important; transition: box-shadow .25s ease, border-color .25s ease !important;
+}
+[data-baseweb="input"]:focus-within, [data-baseweb="textarea"]:focus-within {
+  border-color: var(--brass) !important; box-shadow: 0 0 0 3px rgba(217,169,86,.22) !important;
+}
+[data-testid="stSlider"] [role="slider"] { box-shadow: 0 0 0 4px rgba(217,169,86,.22), 0 0 14px rgba(217,169,86,.45) !important;
+  transition: transform .15s ease; }
+[data-testid="stSlider"] [role="slider"]:hover { transform: scale(1.15); }
+
+/* ---- dialogs and popovers: a velvet card with a lit top edge ---- */
+[data-testid="stDialog"] [role="dialog"] {
+  background: radial-gradient(120% 60% at 50% 0%, #34192a 0%, var(--velvet) 60%) !important;
+  border: 1px solid var(--seam) !important; border-radius: 16px !important;
+  box-shadow: 0 0 0 1px rgba(217,169,86,.12), 0 40px 100px rgba(0,0,0,.7) !important;
+  animation: cq-dialog-in .45s cubic-bezier(.2,.8,.2,1) both;
+}
+[data-testid="stDialog"] [role="dialog"]::before {
+  content: ""; position: absolute; left: 12%; right: 12%; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brass), transparent); opacity: .8;
+}
+@keyframes cq-dialog-in { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+[data-testid="stPopoverBody"] {
+  background: rgba(28,15,23,.92) !important; border: 1px solid var(--seam) !important; border-radius: 14px !important;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 24px 60px rgba(0,0,0,.55) !important;
+}
+
+/* ---- expanders, toasts, empty states ---- */
+[data-testid="stExpander"] details { border: 1px solid var(--seam) !important; border-radius: 10px !important;
+  background: rgba(42,23,34,.45); transition: border-color .25s ease; }
+[data-testid="stExpander"] details:hover { border-color: #6a4357 !important; }
+[data-testid="stExpander"] details[open] { border-color: rgba(217,169,86,.45) !important; }
+[data-testid="stToast"] { background: var(--curtain) !important; border: 1px solid var(--brass) !important; border-radius: 12px !important; }
+.cq-empty { background: linear-gradient(180deg, rgba(42,23,34,.55), rgba(42,23,34,.15)); border-radius: 12px;
+  animation: cq-rise-in .7s cubic-bezier(.2,.8,.2,1) both; }
+
+/* ---- the reel lands with a flash of the marquee bulbs ---- */
+.cq-reel-window { animation: cq-reel-glow 1.2s ease 3.3s both; }
+@keyframes cq-reel-glow {
+  0% { box-shadow: 0 0 0 6px #241320, 0 0 0 8px var(--seam), 0 0 30px rgba(217,169,86,.25); }
+  30% { box-shadow: 0 0 0 6px #241320, 0 0 0 8px var(--brass), 0 0 90px rgba(246,213,142,.75); }
+  100% { box-shadow: 0 0 0 6px #241320, 0 0 0 8px var(--seam), 0 0 36px rgba(217,169,86,.3); }
+}
+
+/* ---- the movie night bars fill in ---- */
+.cq-fit .bar i { animation: cq-fill 1.1s cubic-bezier(.2,.8,.2,1) .2s both; transform-origin: left center; }
+@keyframes cq-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+@media (max-width: 640px) {
+  .st-key-nav { top: .3rem; border-radius: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .cq-ask, .cq-dtitle, .cq-feature-ask, .cq-feature-title, .cq-ask-sub, .cq-feature-label, .cq-feature-facts,
+  .cq-feature-why, .cq-screen .cq-facts, .cq-screen .cq-chips, .cq-feature, .cq-screen, .cq-card, .cq-strip-item,
+  .cq-match, .cq-score-pill, .cq-reasons li, .cq-empty, .cq-reel-window, .cq-fit .bar i, .cq-reel-result .t,
+  [data-testid="stDialog"] [role="dialog"] { animation: none !important; }
+  .cq-card, .cq-card::after, .cq-poster, a.cq-strip-item .cq-poster { transition: none !important; }
+  a.cq-cardlink:hover .cq-card, a.cq-strip-item:hover .cq-poster { transform: none; }
+}
+</style>
+"""
+
+
+# =====================================================================
 # Sign-in: a cinema ticket in front of a slowly drifting wall of this
 # week's trending posters.
 # =====================================================================

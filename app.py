@@ -30,6 +30,7 @@ st.html(ui.CSS)
 st.html(ui.EFFECTS_CSS)
 st.html(ui.HOME_CSS)
 st.html(ui.ATMOS_CSS)
+st.html(ui.POLISH_CSS)
 
 # Which film tints the page background. Pages set this as they render; the
 # footer draws the atmosphere at the end of every run.

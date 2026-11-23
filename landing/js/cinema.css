@@ -1,0 +1,43 @@
+/* Critiq landing: styles for the GSAP motion layer (js/cinema.js) */
+.cx-w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.1em; margin-bottom: -0.1em; }
+.cx-w > span { display: inline-block; will-change: transform, filter; }
+
+/* the projector beam behind the hero */
+.hero { position: relative; overflow: hidden; isolation: isolate; }
+.hero > .wrap { position: relative; z-index: 1; }
+.cx-beam {
+  position: absolute; z-index: 0; top: -30%; right: -12%; width: 85vw; height: 150%; pointer-events: none;
+  transform-origin: 100% 0%; opacity: 0.9;
+  background:
+    conic-gradient(from 212deg at 100% 0%, transparent 0deg, rgb(246 213 142 / 0.10) 14deg, rgb(246 213 142 / 0.18) 24deg, rgb(246 213 142 / 0.08) 34deg, transparent 48deg),
+    radial-gradient(60% 45% at 92% 6%, rgb(217 169 86 / 0.22), transparent 70%);
+  filter: blur(18px);
+  mix-blend-mode: screen;
+}
+
+/* SpotlightCard: a soft light that follows the pointer over a panel */
+.cx .panel, .cx .reel { position: relative; }
+.cx-spot {
+  position: absolute; inset: 0; z-index: 4; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgb(255 248 230 / 0.28), transparent 60%);
+  transition: opacity 400ms ease;
+}
+.panel:hover > .cx-spot, .reel:hover > .cx-spot { opacity: 1; }
+
+/* ShinyText: a sweep of light across the closing button */
+.closing__cta .btn--xl { position: relative; overflow: hidden; }
+.cx .closing__cta .btn--xl::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.45) 50%, transparent 70%);
+  transform: translateX(-120%); animation: cx-shine 4.5s ease-in-out 1.5s infinite;
+}
+@keyframes cx-shine { 0%, 60% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+/* the posters and the reel window get room to tilt */
+.home__strip { perspective: 600px; }
+.home__strip img { transform-style: preserve-3d; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-beam { display: none; }
+  .closing__cta .btn--xl::after { animation: none; }
+}
