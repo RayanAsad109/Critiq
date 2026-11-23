@@ -922,7 +922,7 @@ ADMIT_CSS = """
 .cq-admit {
   position: fixed; inset: 0; z-index: 2147482000; display: grid; place-items: center;
   background: rgba(16,8,13,.86); pointer-events: none;
-  animation: cq-admit-out .35s ease .85s forwards;
+  animation: cq-admit-out .35s ease 1.85s forwards;
 }
 @keyframes cq-admit-out { to { opacity: 0; visibility: hidden; } }
 .cq-admit-stub {
@@ -961,7 +961,7 @@ ADMIT_CSS = """
   100% { opacity: 1; transform: translate(-50%, -50%) rotate(-11deg) scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cq-admit { animation: cq-admit-gone 1.2s steps(1, end) forwards; }
+  .cq-admit { animation: cq-admit-gone 2.2s steps(1, end) forwards; }
   .cq-admit-stub, .cq-admit-stamp { animation: none; }
 }
 @keyframes cq-admit-gone { to { visibility: hidden; opacity: 0; } }
