@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Critiq</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#1C0F17; --text:#F2E8DA; --muted:#BFB1A2; --gold:#D9A956; --line:#45293A; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:18px/1.7 "Newsreader", Georgia, serif; }
+  main { max-width:680px; margin:0 auto; padding:64px 24px 96px; }
+  a { color:var(--gold); }
+  a:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+  .back { font-size:16px; text-decoration:none; }
+  h1 { font-weight:600; font-size:44px; line-height:1.1; margin:24px 0 8px; }
+  h2 { font-weight:600; font-size:24px; margin:40px 0 8px; }
+  .updated { color:var(--muted); margin:0 0 32px; }
+  ul { padding-left:20px; }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:15px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">Back to Critiq</a>
+  <h1>Privacy policy</h1>
+  <p class="updated">Last updated November 22, 2026</p>
+
+  <p>Critiq is a personal project by Muhammad Rayan Asad. It keeps a log of what you watch and uses it to suggest what to watch next. This page explains what it stores and why.</p>
+
+  <h2>What Critiq stores</h2>
+  <ul>
+    <li>Your name and email address from Google, when you sign in. Critiq never sees your Google password.</li>
+    <li>The ratings, reviews and watchlist you add.</li>
+    <li>Your preferences, such as favourite actors and directors, genres and streaming services.</li>
+  </ul>
+
+  <h2>How it's used</h2>
+  <p>Only to show you your own library and to make your recommendations. Nothing is sold, shared with advertisers or used for tracking. If you send a movie-night invite, the friend who opens it gets picks blended from both of your libraries.</p>
+
+  <h2>Where it's kept</h2>
+  <p>Your data is stored in a Postgres database hosted by Neon. The app runs on Streamlit Community Cloud. Movie details come from TMDB and scores from OMDb; those services receive the titles Critiq looks up, never your personal information.</p>
+
+  <h2>Deleting your data</h2>
+  <p>You can remove any rating in the app. To delete everything, including your account, email <a href="mailto:mrayan_asad@hotmail.com">mrayan_asad@hotmail.com</a> from the address you signed in with, and it will be deleted within 30 days.</p>
+
+  <footer>Titles, posters and cast data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.</footer>
+</main>
+</body>
+</html>
