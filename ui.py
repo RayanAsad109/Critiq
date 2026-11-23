@@ -365,71 +365,11 @@ FOOTER = (
 
 
 # =====================================================================
-# Showtime effects: lights down while loading, curtains open on results,
-# and the slot-machine reel.
+# The slot-machine reel and the movie night fit bars.
 # =====================================================================
 EFFECTS_CSS = """
 <style>
-.cq-lights, .cq-reveal { position: fixed; inset: 0; z-index: 999990; }
-.cq-lights { display: grid; place-items: center; animation: cq-dim .6s ease forwards; }
-@keyframes cq-dim { from { background: rgba(8,4,7,0); } to { background: rgba(8,4,7,.9); } }
-.cq-curtain {
-  position: fixed; top: 0; bottom: 0; width: 51%;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 80%, rgba(0,0,0,.55)),
-    repeating-linear-gradient(90deg, #4c0f26 0 22px, #66173a 22px 34px, #3a0a1c 34px 52px);
-  box-shadow: 0 0 40px rgba(0,0,0,.6);
-}
-.cq-curtain.l { left: 0; }  .cq-curtain.r { right: 0; }
-.cq-lights .cq-curtain.l { transform: translateX(-101%); animation: cq-close-l 1s cubic-bezier(.6,.05,.3,1) .15s forwards; }
-.cq-lights .cq-curtain.r { transform: translateX(101%);  animation: cq-close-r 1s cubic-bezier(.6,.05,.3,1) .15s forwards; }
-@keyframes cq-close-l { to { transform: translateX(0); } }
-@keyframes cq-close-r { to { transform: translateX(0); } }
-
-/* old film-leader countdown */
-.cq-leader {
-  position: relative; z-index: 2; width: 230px; height: 230px; border-radius: 50%;
-  border: 3px solid var(--light); opacity: 0; animation: cq-fade .3s ease .9s forwards;
-  background:
-    linear-gradient(var(--light), var(--light)) center / 2px 100% no-repeat,
-    linear-gradient(var(--light), var(--light)) center / 100% 2px no-repeat,
-    radial-gradient(circle, transparent 62%, var(--light) 62.5%, var(--light) 63.5%, transparent 64%),
-    #1a1016;
-}
-.cq-leader-sweep {
-  position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(rgba(242,232,218,.32) 0deg, rgba(242,232,218,0) 1deg 360deg);
-  animation: cq-sweep 1s linear .9s infinite;
-}
-@keyframes cq-sweep { from { transform: rotate(0); } to { transform: rotate(360deg); } }
-/* 3, 2, 1 plays exactly once (0.7s each, starting at 1.0s) and ends at 3.1s.
-   COUNTDOWN_END in app.py must match, so the curtains never open mid-count. */
-.cq-leader-num span {
-  position: absolute; inset: 0; display: grid; place-items: center; opacity: 0;
-  font-family: var(--sign); font-weight: 900; font-size: 6.5rem; color: var(--light);
-  animation: cq-count .7s linear forwards;
-}
-.cq-leader-num span:nth-child(1) { animation-delay: 1.0s; }
-.cq-leader-num span:nth-child(2) { animation-delay: 1.7s; }
-.cq-leader-num span:nth-child(3) { animation-delay: 2.4s; }
-@keyframes cq-count { 0% { opacity: 1; } 99.9% { opacity: 1; } 100% { opacity: 0; } }
-.cq-leader-cap {
-  position: absolute; z-index: 2; top: calc(50% + 140px); left: 0; right: 0; text-align: center;
-  color: var(--usher); font-style: italic; font-size: 1.1rem;
-}
-.cq-leader-cap span { position: absolute; left: 0; right: 0; opacity: 0; }
-.cq-leader-cap .a { animation: cq-cap-a 3.1s linear both; }      /* shown during the count */
-.cq-leader-cap .b { animation: cq-fade .4s ease 4s both; }        /* only if loading runs long */
-@keyframes cq-cap-a { 0%, 30% { opacity: 0; } 32%, 99% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes cq-fade { to { opacity: 1; } }
-
-/* curtains part to reveal the results */
-.cq-reveal { pointer-events: none; animation: cq-gone 0s linear 1.5s forwards; }
-.cq-reveal .cq-curtain.l { animation: cq-open-l 1.2s cubic-bezier(.6,.05,.3,1) .15s forwards; }
-.cq-reveal .cq-curtain.r { animation: cq-open-r 1.2s cubic-bezier(.6,.05,.3,1) .15s forwards; }
-@keyframes cq-open-l { to { transform: translateX(-101%); } }
-@keyframes cq-open-r { to { transform: translateX(101%); } }
-@keyframes cq-gone { to { visibility: hidden; } }
+@keyframes cq-fade { to { opacity: 1; } }   /* the reel result fades in */
 
 /* slot-machine reel */
 .cq-reel-window {
@@ -460,28 +400,10 @@ a.cq-btnlink {
             border-radius: 6px; padding: .7rem .9rem; word-break: break-all; color: var(--bulb); }
 
 @media (prefers-reduced-motion: reduce) {
-  .cq-curtain, .cq-leader-sweep, .cq-leader-num span { animation: none !important; }
-  .cq-lights .cq-curtain { transform: none; }
-  .cq-leader-num span:nth-child(3) { opacity: 1; }
-  .cq-leader-cap .a { animation: none !important; opacity: 1; }
-  .cq-reveal { display: none; }
   .cq-reel-strip { animation-duration: .01s !important; }
 }
 </style>
 """
-
-
-def lights_down_html(caption: str = "Finding your next watch") -> str:
-    return ('<div class="cq-lights" role="status" aria-label="Loading recommendations">'
-            '<div class="cq-curtain l"></div><div class="cq-curtain r"></div>'
-            '<div class="cq-leader"><div class="cq-leader-sweep"></div>'
-            '<div class="cq-leader-num"><span>3</span><span>2</span><span>1</span></div></div>'
-            f'<div class="cq-leader-cap"><span class="a">{escape(caption)}</span>'
-            '<span class="b">Threading the reel…</span></div></div>')
-
-
-def curtain_reveal_html() -> str:
-    return '<div class="cq-reveal"><div class="cq-curtain l"></div><div class="cq-curtain r"></div></div>'
 
 
 def reel_html(titles: list[dict], winner: int, href: str, spin_id: str) -> str:
@@ -898,6 +820,169 @@ a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-
 }
 </style>
 """
+
+
+# =====================================================================
+# Skeletons: the page's layout in placeholder shapes, shown in a st.empty()
+# stage while picks are computed, then replaced in place by the real thing.
+# A slow velvet shimmer, never gold. Posters fade in when they arrive.
+# =====================================================================
+SKELETON_CSS = """
+<style>
+.cq-sk { display: flex; flex-direction: column; gap: 1.4rem; }
+.cq-sk-box {
+  border-radius: 6px;
+  background: linear-gradient(100deg, #2A1722 0%, #2A1722 35%, #3A2030 50%, #2A1722 65%, #2A1722 100%);
+  background-size: 300% 100%; animation: cq-sk-shimmer 2.4s ease-in-out infinite;
+}
+@keyframes cq-sk-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.cq-sk-bar { height: 1rem; border-radius: 4px; }
+
+/* home: tonight's feature, then the actions, then film-strip rows */
+.cq-sk-hero { position: relative; min-height: 520px; border-radius: 10px; border: 1px solid var(--seam); background: #221219;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: .8rem; padding: 2.4rem 3.4rem 2.6rem; }
+.cq-sk-ask { height: 2.8rem; width: min(560px, 80%); }
+.cq-sk-ask.b { width: min(300px, 50%); margin-bottom: 1rem; }
+.cq-sk-label { width: 9rem; height: .9rem; }
+.cq-sk-title { height: 2.4rem; width: min(380px, 65%); }
+.cq-sk-fact { width: min(260px, 50%); }
+.cq-sk-fact.b { width: min(200px, 40%); }
+.cq-sk-btns, .cq-sk-pills { display: flex; gap: .6rem; flex-wrap: wrap; }
+.cq-sk-btn { width: 9.5rem; height: 2.5rem; border-radius: 8px; }
+.cq-sk-pill { width: 8.5rem; height: 2.3rem; border-radius: 999px; }
+.cq-sk-strip-title { width: 15rem; height: 1.4rem; margin: .4rem 0 .5rem; }
+.cq-sk-strip { display: flex; gap: .9rem; overflow: hidden; padding: 24px 16px 22px; border-radius: 6px;
+  border: 1px solid #2a1620; background: #110910; }
+.cq-sk-poster { flex: 0 0 148px; aspect-ratio: 2 / 3; }
+
+/* grid: recommendation cards, poster then two lines */
+.cq-sk-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.6rem 1.4rem; }
+.cq-sk-card { display: flex; flex-direction: column; gap: .55rem; }
+.cq-sk-card .cq-sk-poster { flex: none; width: 100%; }
+.cq-sk-card .cq-sk-bar.t { width: 70%; height: 1.1rem; margin-top: .3rem; }
+.cq-sk-card .cq-sk-bar.m { width: 45%; height: .8rem; }
+.cq-sk-card .cq-sk-bar.r { width: 85%; height: .8rem; }
+
+/* real posters fade in instead of popping; until the image arrives the box keeps the skeleton tone */
+img.cq-poster { background-color: #2A1722; animation: cq-poster-in .3s ease both; }
+@keyframes cq-poster-in { from { opacity: 0; } to { opacity: 1; } }
+.cq-reel-strip img.cq-poster { animation: none; }
+
+@media (max-width: 640px) {
+  .cq-sk-hero { min-height: 420px; padding: 1.6rem; }
+  .cq-sk-poster { flex-basis: 118px; }
+  .cq-sk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cq-sk-btn { width: 7.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cq-sk-box { animation: none; background: #2A1722; }
+  img.cq-poster { animation: none; }
+}
+</style>
+"""
+
+
+def skeleton_html(layout: str) -> str:
+    """Placeholder shapes for a page that is still loading. `layout`: "home" or "grid"."""
+    box = 'class="cq-sk-box'
+    posters = lambda n: "".join(f'<div {box} cq-sk-poster"></div>' for _ in range(n))  # noqa: E731
+    if layout == "home":
+        hero = ('<div class="cq-sk-hero">'
+                f'<div {box} cq-sk-bar cq-sk-ask"></div><div {box} cq-sk-bar cq-sk-ask b"></div>'
+                f'<div {box} cq-sk-bar cq-sk-label"></div><div {box} cq-sk-bar cq-sk-title"></div>'
+                f'<div {box} cq-sk-bar cq-sk-fact"></div><div {box} cq-sk-bar cq-sk-fact b"></div>'
+                '<div class="cq-sk-btns">'
+                + "".join(f'<div {box} cq-sk-btn"></div>' for _ in range(3)) + '</div></div>')
+        pills = '<div class="cq-sk-pills">' + "".join(f'<div {box} cq-sk-pill"></div>' for _ in range(5)) + '</div>'
+        strips = "".join(f'<div><div {box} cq-sk-bar cq-sk-strip-title"></div>'
+                         f'<div class="cq-sk-strip">{posters(9)}</div></div>' for _ in range(2))
+        body = hero + pills + strips
+    else:
+        card = (f'<div class="cq-sk-card"><div {box} cq-sk-poster"></div><div {box} cq-sk-bar t"></div>'
+                f'<div {box} cq-sk-bar m"></div><div {box} cq-sk-bar r"></div></div>')
+        body = f'<div class="cq-sk-grid">{card * 8}</div>'
+    return (f'<div class="cq-sk" role="status" aria-busy="true" aria-label="Loading your picks">'
+            f'{body}</div>')
+
+
+# =====================================================================
+# Admitted: right after signing in, the ticket stub from the sign-in page
+# gets a red rubber stamp, then the overlay fades away to reveal Home.
+# CSS only (st.html strips scripts and <svg>); click-through throughout.
+# =====================================================================
+_INK_SVG_RAW = ("<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'>"
+                "<filter id='i'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7'/>"
+                "<feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.6 0 0 0 2.25'/></filter>"
+                "<rect width='100%' height='100%' filter='url(#i)'/></svg>")
+# fully percent-encoded, like the grain: raw angle brackets in a <style> block get it stripped
+INK_SVG = "data:image/svg+xml," + __import__("urllib.parse", fromlist=["quote"]).quote(_INK_SVG_RAW, safe="")
+
+ADMIT_CSS = """
+<style>
+.cq-admit {
+  position: fixed; inset: 0; z-index: 2147482000; display: grid; place-items: center;
+  background: rgba(16,8,13,.86); pointer-events: none;
+  animation: cq-admit-out .35s ease .85s forwards;
+}
+@keyframes cq-admit-out { to { opacity: 0; visibility: hidden; } }
+.cq-admit-stub {
+  position: relative; width: min(300px, 82vw); padding: 1.6rem 1.6rem 1.4rem 2rem; color: #2A1722;
+  background: #F2E8DA; border-radius: 10px; box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  -webkit-mask: radial-gradient(circle 13px at 0 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle 13px at 0 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+          mask: radial-gradient(circle 13px at 0 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle 13px at 0 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+  animation: cq-arrive .35s cubic-bezier(.2,.8,.2,1) both;
+}
+.cq-admit-stub::before {            /* the torn, perforated edge */
+  content: ""; position: absolute; left: .7rem; top: 1rem; bottom: 1rem; border-left: 2px dashed #B9A78F;
+}
+@keyframes cq-arrive { from { opacity: 0; transform: translateY(18px) rotate(-1.5deg); } }
+.cq-admit-kicker { font-family: var(--sign); font-weight: 700; font-size: .72rem; letter-spacing: .32em; color: #8A5A12; }
+.cq-admit-name { font-family: var(--sign); font-weight: 900; font-stretch: 75%; font-size: 3.2rem;
+  line-height: .95; letter-spacing: .06em; color: #2A1722; margin: .35rem 0 .9rem; }
+.cq-admit-facts { display: flex; gap: 1.6rem; border-top: 1px solid #D8C8B2; padding-top: .8rem; }
+.cq-admit-facts span { display: block; font-family: var(--sign); font-size: .66rem; font-weight: 700;
+  letter-spacing: .14em; color: #8A7480; }
+.cq-admit-facts b { font-family: var(--sign); font-weight: 700; font-size: 1rem; color: #2A1722; white-space: nowrap; }
+.cq-admit-stamp {
+  position: absolute; left: 60%; top: 64%; padding: .22rem .6rem .18rem;
+  font-family: var(--sign); font-weight: 900; font-stretch: 80%; font-size: 2rem; letter-spacing: .12em;
+  color: #9E2A2B; border: 4px solid #9E2A2B; border-radius: 6px; mix-blend-mode: multiply;
+  box-shadow: inset 0 0 0 2px #F2E8DA, inset 0 0 0 4px #9E2A2B;
+  -webkit-mask-image: url("__INK__"); mask-image: url("__INK__");
+  -webkit-mask-size: 160px 160px; mask-size: 160px 160px;
+  transform: translate(-50%, -50%) rotate(-11deg);
+  animation: cq-stamp .42s cubic-bezier(.3,1.5,.5,1) .25s both;
+}
+@keyframes cq-stamp {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-11deg) scale(1.6); }
+  55% { opacity: 1; transform: translate(-50%, -50%) rotate(-11deg) scale(.95); }
+  100% { opacity: 1; transform: translate(-50%, -50%) rotate(-11deg) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cq-admit { animation: cq-admit-gone 1.2s steps(1, end) forwards; }
+  .cq-admit-stub, .cq-admit-stamp { animation: none; }
+}
+@keyframes cq-admit-gone { to { visibility: hidden; opacity: 0; } }
+</style>
+""".replace("__INK__", INK_SVG)
+
+
+def ticket_seat(day) -> str:
+    """The seat printed on the ticket: changes daily, same all day."""
+    n = day.toordinal()
+    return f"{'DEFGHJK'[n % 7]}{n % 17 + 4}"
+
+
+def admitted_html(date_label: str, seat: str) -> str:
+    return (ADMIT_CSS
+            + '<div class="cq-admit" aria-hidden="true"><div class="cq-admit-stub">'
+            '<div class="cq-admit-kicker">ADMIT ONE</div><div class="cq-admit-name">CRITIQ</div>'
+            '<div class="cq-admit-facts">'
+            f'<div><span>DATE</span><b>{escape(date_label)}</b></div>'
+            f'<div><span>SEAT</span><b>{escape(seat)}</b></div></div>'
+            '<div class="cq-admit-stamp">ADMITTED</div></div></div>')
 
 
 # =====================================================================

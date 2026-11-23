@@ -31,6 +31,7 @@ st.html(ui.EFFECTS_CSS)
 st.html(ui.HOME_CSS)
 st.html(ui.ATMOS_CSS)
 st.html(ui.WALL_CSS)
+st.html(ui.SKELETON_CSS)
 st.html(ui.POLISH_CSS)
 
 # Which film tints the page background. Pages set this as they render; the
@@ -50,6 +51,22 @@ def footer(wall: list[str] | None = None):
         st.html(ui.atmosphere_html(AMBIENT["backdrop"]) + ui.FOOTER)
     else:
         st.html(ui.app_wall_html(wall) + ui.FOOTER)
+
+
+ADMIT_WINDOW = 20   # seconds: a sign-in token issued this recently means "just came back from Google"
+
+
+def just_signed_in() -> bool:
+    """True once, on the first run of a session that has just come back from Google sign-in.
+    Uses the ID token's issued-at time; without it, falls back to having seen the sign-in
+    page earlier in this same session. Never true on later runs of the session."""
+    if st.session_state.get("admit_checked"):
+        return False
+    st.session_state.admit_checked = True
+    iat = st.user.get("iat")
+    if isinstance(iat, (int, float)):
+        return 0 <= time.time() - iat < ADMIT_WINDOW
+    return bool(st.session_state.pop("saw_signin", False))
 
 
 WALL_MIN = 12       # fewer of the user's own posters than this: top up with trending
@@ -75,10 +92,6 @@ def wall_posters(own: list[dict], key: str) -> list[str]:
 GRID = 6            # posters per row in Rate / Library / More like this
 REC_GRID = 4        # wider cards for recommendations (they carry reasons)
 PAGES = ["Home", "Rate", "Library", "Discover", "Movie night"]
-# The 3-2-1 ends 3.1s after the overlay appears (see .cq-leader-num in ui.py). The extra
-# 0.4s covers the time it takes the browser to receive and draw the overlay.
-COUNTDOWN_END = 3.1
-MIN_SHOW_SECONDS = COUNTDOWN_END + 0.4
 
 # One-tap moods on the home page: (what to look for, genres, movies/shows)
 MOODS = {
@@ -211,7 +224,8 @@ if auth_configured():
     if not st.user.is_logged_in:
         st.html(ui.SIGNIN_CSS)
         today = date.today()
-        seat = f"{'DEFGHJK'[today.toordinal() % 7]}{today.toordinal() % 17 + 4}"
+        seat = ui.ticket_seat(today)
+        st.session_state.saw_signin = True      # fallback for the stamp when there is no iat claim
         href = "?" + urlencode({"with": qp["with"], "signin": 1} if qp.get("with") else {"signin": 1})
         st.html(ui.signin_html(signin_posters(get_secret("TMDB_API_KEY")),
                                today.strftime("%a %d %b"), seat, href, invited=bool(qp.get("with"))))
@@ -221,6 +235,9 @@ if auth_configured():
         del qp["signin"]
     user_id = st.user.email
     user_label = st.user.get("name") or user_id
+    if just_signed_in():
+        today = date.today()
+        st.html(ui.admitted_html(today.strftime("%a %d %b"), ui.ticket_seat(today)))
 else:
     user_id = "local"          # no login configured: single-user mode on your own machine
     user_label = None
@@ -423,20 +440,17 @@ def save_button(t: dict, where: str, label: bool = False, stretch: bool | None =
               on_click=toggle_saved, args=(t["media_type"], t["id"]))
 
 
-# ----------------------------------------------------------- lights down
-def showtime(work, caption: str):
-    """Dim the house and run the 3-2-1 leader while `work()` loads, then part the curtains."""
-    stage = st.empty()
-    stage.html(ui.lights_down_html(caption))
-    started = time.time()
+# --------------------------------------------------------------- skeletons
+def load_into(stage, layout: str, work):
+    """Show the page's skeleton in `stage` (a st.empty) while `work()` runs, and return its
+    result. The caller then renders the real content with `stage.container()`, which
+    replaces the skeleton in place, as soon as the data is ready."""
+    stage.html(ui.skeleton_html(layout))
     try:
-        result = work()
+        return work()
     except Exception:
         stage.empty()
         raise
-    time.sleep(max(0.0, MIN_SHOW_SECONDS - (time.time() - started)))
-    stage.html(ui.curtain_reveal_html())
-    return result
 
 
 # --------------------------------------------------------------- spin the reel
@@ -625,22 +639,26 @@ def start_from_home():
     go_to("Discover", autorun=True)
 
 
+def home_sig() -> tuple:
+    """What the home picks depend on: your ratings and your streaming services."""
+    services = prefs.get("services") or []
+    return (len(watched), round(sum(w["rating"] for w in watched), 2), tuple(services))
+
+
+def home_picks_ready() -> bool:
+    mem = rec_memory().get(f"{user_id}|home")
+    return bool(mem) and mem[0] == home_sig()
+
+
 def home_picks() -> list:
     """Your top picks for the home screen, recomputed only when your ratings or
-    streaming services change (the lights-down show covers the first load)."""
-    services = prefs.get("services") or []
-    sig = (len(watched), round(sum(w["rating"] for w in watched), 2), tuple(services))
-    mem = rec_memory().get(f"{user_id}|home")
-    if mem and mem[0] == sig:
-        return mem[1]
-
-    def work():
-        p = {"services": services}
-        candidates, _ = gather_candidates(watched, p, "both")
-        return attach_and_filter(recommend(watched, candidates, p, "both", top_n=40), omdb, want=10)
-
-    picks = showtime(work, "Setting up tonight's feature")
-    rec_memory()[f"{user_id}|home"] = (sig, picks)
+    streaming services change (the home skeleton covers that wait)."""
+    if home_picks_ready():
+        return rec_memory()[f"{user_id}|home"][1]
+    p = {"services": prefs.get("services") or []}
+    candidates, _ = gather_candidates(watched, p, "both")
+    picks = attach_and_filter(recommend(watched, candidates, p, "both", top_n=40), omdb, want=10)
+    rec_memory()[f"{user_id}|home"] = (home_sig(), picks)
     return picks
 
 
@@ -667,79 +685,100 @@ def safe(fn, default):
 
 if page == "Home":
     when = part_of_day()
-    trending = [t for t in safe(tmdb.trending, []) if t["key"] not in watched_by_key]
+    stage = st.empty()
 
-    # ---------- tonight's feature ----------
-    if watched:
-        picks = [r for r in safe(home_picks, []) if r.title["key"] not in watched_by_key]
-        top = max((r.score for r in picks), default=1) or 1
-        features = [(r.title, "Tonight's feature", r.reasons[0] if r.reasons else "",
-                     f"{max(1, min(99, round(100 * r.score / top)))}% match") for r in picks]
-    else:
-        features = [(t, "Trending this week", "Rate a few things and this becomes your own pick.", "")
-                    for t in trending[:8]]
-    if features:
-        idx = st.session_state.get("feature_idx", 0) % len(features)
-        base, label, why, match = features[idx]
-        t = {**base, **safe(lambda: tmdb.full_details(base["media_type"], base["id"]), {})}
-        for k in ("imdb", "rt"):                       # keep scores already looked up
-            if base.get(k) is not None:
-                t[k] = base[k]
-        facts = [", ".join(x for x in [t.get("year", ""), ui.kind(t), t.get("runtime", "")] if x),
-                 ", ".join(ui.score_bits(t) + ([match] if match else []))]
-        ambient(t)
-        st.html(ui.feature_html(t, when, label, facts, why, link(t["key"])))
-        with st.container(key="feature_actions", horizontal=True, gap="small"):
-            if t.get("trailer"):
-                st.link_button("Watch the trailer", f"https://www.youtube.com/watch?v={t['trailer']}",
-                               icon=":material/play_arrow:", type="primary")
-            save_button(t, "feature", label=True, stretch=False)
-            if len(features) > 1:
-                st.button("Not tonight", icon=":material/skip_next:", on_click=next_feature,
-                          args=(len(features),), help="Show the next pick")
-    else:
-        st.html(ui.home_html(when, len(watched)))
-
-    # ---------- moods + main actions ----------
-    st.write("")
-    st.pills("Mood", list(MOODS), key="mood", label_visibility="collapsed")
-    with st.container(horizontal=True, vertical_alignment="center"):
-        st.button("Find my next watch", type="primary", icon=":material/auto_awesome:",
-                  on_click=start_from_home)
-        st.button("Movie night with a friend", icon=":material/group:", on_click=go_to,
-                  args=("Movie night",))
+    def home_data() -> dict:
+        """Everything Home shows, fetched before anything is drawn, so the skeleton can stand in."""
+        d = {"trending": [t for t in safe(tmdb.trending, []) if t["key"] not in watched_by_key]}
         if watched:
-            recent = sorted(watched, key=lambda w: w.get("updated_at", ""), reverse=True)[:40]
-            pairs = tuple((w["title"].get("imdb_id"), w["rating"]) for w in recent
-                          if w["title"].get("imdb_id"))
-            avg = sum(w["rating"] for w in watched) / len(watched)
-            st.html(ui.stats_line(len(watched), avg, vs_imdb(pairs) if pairs else None), width="content")
+            picks = [r for r in safe(home_picks, []) if r.title["key"] not in watched_by_key]
+            top = max((r.score for r in picks), default=1) or 1
+            d["features"] = [(r.title, "Tonight's feature", r.reasons[0] if r.reasons else "",
+                              f"{max(1, min(99, round(100 * r.score / top)))}% match") for r in picks]
+        else:
+            d["features"] = [(t, "Trending this week", "Rate a few things and this becomes your own pick.", "")
+                             for t in d["trending"][:8]]
+        d["feature"] = None
+        if d["features"]:
+            idx = st.session_state.get("feature_idx", 0) % len(d["features"])
+            base, label, why, match = d["features"][idx]
+            t = {**base, **safe(lambda: tmdb.full_details(base["media_type"], base["id"]), {})}
+            for k in ("imdb", "rt"):                       # keep scores already looked up
+                if base.get(k) is not None:
+                    t[k] = base[k]
+            facts = [", ".join(x for x in [t.get("year", ""), ui.kind(t), t.get("runtime", "")] if x),
+                     ", ".join(ui.score_bits(t) + ([match] if match else []))]
+            d["feature"] = (t, label, why, facts)
+        d["fav"], d["more"] = None, []
+        if watched:
+            d["fav"] = max(watched, key=lambda w: (w["rating"], w.get("updated_at", "")))
+            fav_t = d["fav"]["title"]
+            similar = safe(lambda: tmdb.full_details(fav_t["media_type"], fav_t["id"]), {})
+            d["more"] = [s for s in similar.get("similar", []) if s["key"] not in watched_by_key]
+        d["services"] = prefs.get("services") or []
+        d["fresh"] = ([t for t in safe(lambda: tmdb.new_on_services(d["services"]), [])
+                       if t["key"] not in watched_by_key] if d["services"] else [])
+        return d
 
-    # ---------- film strips ----------
-    if watchlist:
-        st.html(ui.strip_html("Your watchlist", [w["title"] for w in watchlist[:24]], link))
-    if watched:
-        fav = max(watched, key=lambda w: (w["rating"], w.get("updated_at", "")))
-        similar = safe(lambda: tmdb.full_details(fav["title"]["media_type"], fav["title"]["id"]), {})
-        more = [s for s in similar.get("similar", []) if s["key"] not in watched_by_key]
-        if more:
-            st.html(ui.strip_html(f"Because you loved {fav['title']['title']}", more, link))
-    services = prefs.get("services") or []
-    if services:
-        fresh = [t for t in safe(lambda: tmdb.new_on_services(services), [])
-                 if t["key"] not in watched_by_key]
-        if fresh:
-            names = " & ".join(services[:2]) + (" and more" if len(services) > 2 else "")
-            st.html(ui.strip_html(f"New on {names}", fresh, link))
-    if trending:
-        st.html(ui.strip_html("Trending this week", trending, link))
-    last = [r.title for r in rec_memory().get(user_id, []) if r.title["key"] not in watched_by_key]
-    if last:
-        st.html(ui.strip_html("From your last search", last, link))
-    if not watched and not watchlist:
+    # the skeleton shows on the first Home of a session (right after sign-in) and whenever the
+    # picks have to be worked out again; otherwise the data is cached and Home draws at once
+    if not st.session_state.get("home_drawn") or (watched and not home_picks_ready()):
+        home = load_into(stage, "home", home_data)
+    else:
+        home = home_data()
+    trending = home["trending"]
+
+    with stage.container():
+        # ---------- tonight's feature ----------
+        if home["feature"]:
+            t, label, why, facts = home["feature"]
+            ambient(t)
+            st.html(ui.feature_html(t, when, label, facts, why, link(t["key"])))
+            with st.container(key="feature_actions", horizontal=True, gap="small"):
+                if t.get("trailer"):
+                    st.link_button("Watch the trailer", f"https://www.youtube.com/watch?v={t['trailer']}",
+                                   icon=":material/play_arrow:", type="primary")
+                save_button(t, "feature", label=True, stretch=False)
+                if len(home["features"]) > 1:
+                    st.button("Not tonight", icon=":material/skip_next:", on_click=next_feature,
+                              args=(len(home["features"]),), help="Show the next pick")
+        else:
+            st.html(ui.home_html(when, len(watched)))
+
+        # ---------- moods + main actions ----------
         st.write("")
-        st.caption("New here? Rate three to five things you've watched, or bring your history over "
-                   "from Letterboxd in the Account menu.")
+        st.pills("Mood", list(MOODS), key="mood", label_visibility="collapsed")
+        with st.container(horizontal=True, vertical_alignment="center"):
+            st.button("Find my next watch", type="primary", icon=":material/auto_awesome:",
+                      on_click=start_from_home)
+            st.button("Movie night with a friend", icon=":material/group:", on_click=go_to,
+                      args=("Movie night",))
+            if watched:
+                recent = sorted(watched, key=lambda w: w.get("updated_at", ""), reverse=True)[:40]
+                pairs = tuple((w["title"].get("imdb_id"), w["rating"]) for w in recent
+                              if w["title"].get("imdb_id"))
+                avg = sum(w["rating"] for w in watched) / len(watched)
+                st.html(ui.stats_line(len(watched), avg, vs_imdb(pairs) if pairs else None), width="content")
+
+        # ---------- film strips ----------
+        if watchlist:
+            st.html(ui.strip_html("Your watchlist", [w["title"] for w in watchlist[:24]], link))
+        if home["more"]:
+            st.html(ui.strip_html(f"Because you loved {home['fav']['title']['title']}", home["more"], link))
+        if home["fresh"]:
+            services = home["services"]
+            names = " & ".join(services[:2]) + (" and more" if len(services) > 2 else "")
+            st.html(ui.strip_html(f"New on {names}", home["fresh"], link))
+        if trending:
+            st.html(ui.strip_html("Trending this week", trending, link))
+        last = [r.title for r in rec_memory().get(user_id, []) if r.title["key"] not in watched_by_key]
+        if last:
+            st.html(ui.strip_html("From your last search", last, link))
+        if not watched and not watchlist:
+            st.write("")
+            st.caption("New here? Rate three to five things you've watched, or bring your history over "
+                       "from Letterboxd in the Account menu.")
+    st.session_state.home_drawn = True
 
 # ===================================================================== RATE
 if page in ("Rate", "Library"):
@@ -960,10 +999,8 @@ if page == "Discover":
     has_signal = (watched or prefs["actors"] or prefs["directors"] or prefs["vibe"] or prefs["genres"]
                   or prefs["year_min"] or prefs["year_max"] or prefs.get("services")
                   or prefs.get("min_imdb") or prefs.get("min_rt"))
-    if go and not has_signal:
-        st.html(ui.empty_html("Nothing to go on yet",
-                              "Rate a few titles, or open Filters and pick a genre, actor or director."))
-    elif go:
+    stage = st.empty()               # the results area: skeleton cards while picks are worked out
+    if go and has_signal:
         media_filter = KIND[media]
 
         def work():
@@ -972,21 +1009,25 @@ if page == "Discover":
             return attach_and_filter(ranked, omdb, prefs.get("min_imdb") or 0,
                                      prefs.get("min_rt") or 0, want=12)
 
-        rec_memory()[user_id] = showtime(work, "Finding your next watch")
-        if not rec_memory()[user_id]:
+        rec_memory()[user_id] = load_into(stage, "grid", work)
+
+    recs = [r for r in rec_memory().get(user_id, []) if r.title["key"] not in watched_by_key]
+    with stage.container():
+        if go and not has_signal:
+            st.html(ui.empty_html("Nothing to go on yet",
+                                  "Rate a few titles, or open Filters and pick a genre, actor or director."))
+        elif go and not rec_memory()[user_id]:
             st.html(ui.empty_html("No matches with these filters",
                                   "Try more genres, a wider year range, more services or lower "
                                   "minimum scores."))
-
-    recs = [r for r in rec_memory().get(user_id, []) if r.title["key"] not in watched_by_key]
-    if recs:
-        ambient(recs[0].title)
-        st.write("")
-        spin_button([r.title for r in recs], [r.score for r in recs], "spin-discover")
-        rec_grid(recs, "disc")
-    elif not go:
-        st.caption("Recommendations use your ratings, the words in your reviews and any filters "
-                   "you set. Click any poster for details.")
+        if recs:
+            ambient(recs[0].title)
+            st.write("")
+            spin_button([r.title for r in recs], [r.score for r in recs], "spin-discover")
+            rec_grid(recs, "disc")
+        elif not go:
+            st.caption("Recommendations use your ratings, the words in your reviews and any filters "
+                       "you set. Click any poster for details.")
 
 
 # ============================================================== MOVIE NIGHT
@@ -1070,6 +1111,7 @@ if page == "Movie night":
                 st.space("stretch")
                 go_night = st.button("Find something for both of us", type="primary",
                                      icon=":material/auto_awesome:")
+            stage = st.empty()       # skeleton cards while the blend is worked out
             if go_night:
                 media_filter = KIND[st.session_state.night_kind]
                 night_prefs = {"services": prefs.get("services") if only_mine else []}
@@ -1089,25 +1131,26 @@ if page == "Movie night":
                             p.title.update(imdb=s["imdb"], rt=s["rt"])
                     return picks[:12]
 
-                rec_memory()[night_key] = showtime(night_work, f"Setting up movie night with {friend_name}")
-                if not rec_memory()[night_key]:
+                rec_memory()[night_key] = load_into(stage, "grid", night_work)
+
+            with stage.container():
+                if go_night and not rec_memory()[night_key]:
                     st.html(ui.empty_html("Nothing you'd both like",
                                           "Try Movies and Shows together, or turn off the services filter."))
+                picks = [p for p in rec_memory().get(night_key, []) if p.title["key"] not in watched_by_key]
+                if picks:
+                    def theirs(reason: str) -> str:
+                        return (reason.replace("Because you rated", f"{friend_name} rated")
+                                      .replace("You wrote about", f"{friend_name} wrote about"))
 
-            picks = [p for p in rec_memory().get(night_key, []) if p.title["key"] not in watched_by_key]
-            if picks:
-                def theirs(reason: str) -> str:
-                    return (reason.replace("Because you rated", f"{friend_name} rated")
-                                  .replace("You wrote about", f"{friend_name} wrote about"))
-
-                as_recs = [Recommendation(p.title, p.score,
-                                          [x.replace("Because you rated", "You rated") for x in p.reasons_you[:1]]
-                                          + [theirs(x) for x in p.reasons_friend[:1]])
-                           for p in picks]
-                fit = {p.title["key"]: (p.you, p.friend) for p in picks}
-                ambient(picks[0].title)
-                st.write("")
-                spin_button([p.title for p in picks], [p.score for p in picks], "spin-night")
-                rec_grid(as_recs, "night", fit=fit, friend_name=friend_name)
+                    as_recs = [Recommendation(p.title, p.score,
+                                              [x.replace("Because you rated", "You rated") for x in p.reasons_you[:1]]
+                                              + [theirs(x) for x in p.reasons_friend[:1]])
+                               for p in picks]
+                    fit = {p.title["key"]: (p.you, p.friend) for p in picks}
+                    ambient(picks[0].title)
+                    st.write("")
+                    spin_button([p.title for p in picks], [p.score for p in picks], "spin-night")
+                    rec_grid(as_recs, "night", fit=fit, friend_name=friend_name)
 
 footer(wall=wall_posters([w["title"] for w in watched] + [w["title"] for w in watchlist], api_key))
