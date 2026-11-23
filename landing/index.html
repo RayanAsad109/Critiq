@@ -52,7 +52,7 @@
 <script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
 <link rel="modulepreload" href="assets/moments/moments.js">
 <link rel="modulepreload" href="assets/moments/lib.js">
-<link rel="modulepreload" href="assets/moments/letters-assemble/moment.js">
+<link rel="modulepreload" href="assets/moments/marquee-row/moment.js">
 <link rel="modulepreload" href="assets/moments/line-carries-colour/moment.js">
 <style>
   /* HERO VISUAL: the app's Home screen as live HTML, in the app's own screening-room colours */
@@ -131,13 +131,53 @@
 
   /* REVIEWS split frame */
   #reviews .stage { --fade-h: 64px; }
-  #line .mo-la__sub { color: var(--ink); }
 
   /* FEATURES 2x2 */
   #features .panel { --p-h: 336px; }
   @media (max-width: 639px) { #features .panel { --p-h: 180px; } #features .stage { --fade-h: 40px; } }
 
   .faq-marks { display: flex; flex-wrap: wrap; gap: 12px; padding-top: var(--s-4); }
+  /* SPIN THE REEL: the app's slot machine (ui.py .cq-reel), in the page's tokens */
+  .reel { display: grid; place-items: center; }
+  .reel__machine { display: grid; justify-items: center; gap: 16px; padding: 32px 24px; }
+  .reel__window { position: relative; width: 168px; height: 252px; overflow: hidden; border-radius: 8px; border: 2px solid var(--p-accent); background: var(--p-bg);
+    box-shadow: 0 0 0 6px #241320, 0 0 0 8px #45293a, 0 0 30px rgb(217 169 86 / 0.3); }
+  .reel__window::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgb(0 0 0 / 0.65), transparent 22%, transparent 78%, rgb(0 0 0 / 0.65)); }
+  .reel__strip { display: flex; flex-direction: column; will-change: transform; }
+  .reel__strip img { width: 168px; height: 252px; object-fit: cover; flex: none; display: block; }
+  .reel__result { display: grid; justify-items: center; gap: 2px; text-align: center; color: #262d24; min-height: 76px; transition: opacity 300ms ease; }
+  .reel.is-spinning .reel__result { opacity: 0; }
+  .reel__tag { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+  .reel__title { font: 500 28px/1.15 var(--font-display); }
+  .reel__meta { font-size: 14px; }
+  .reel__moods { margin-top: var(--s-8); }
+  .reel__moods li { font: 400 28px/1.2 var(--font-display); color: var(--ink); white-space: nowrap; }
+  @media (max-width: 639px) { .reel__window { width: 136px; height: 204px; } .reel__strip img { width: 136px; height: 204px; } .reel__moods li { font-size: 20px; } }
+  @media (prefers-reduced-motion: reduce) { .reel__strip { transition: none !important; } }
+
+  /* MOVIE NIGHT: the app's two fit bars (ui.py .cq-fit) */
+  .mn-at { position: absolute; left: 50%; top: 48px; width: min(760px, calc(100% - 48px)); transform: translateX(-50%); }
+  .mn { font-size: 13px; }
+  .mn__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 16px 20px; border-bottom: 1px solid var(--u-line); }
+  .mn__t { font-weight: 600; font-size: 15px; }
+  .mn__who { display: inline-flex; align-items: center; gap: 6px; color: var(--u-muted); }
+  .mn__k { width: 10px; height: 10px; border-radius: 3px; margin-left: 8px; }
+  .mn__k--you, .mn__bar i { background: #c4437c; }
+  .mn__k--fr, .mn__bar--fr i { background: #d9a956; }
+  .mn__sort { margin-left: auto; color: var(--u-muted); }
+  .mn__list li { display: grid; grid-template-columns: 36px minmax(0, 1.3fr) minmax(0, 1.4fr) 40px 56px; align-items: center; gap: 16px; padding: 10px 20px; }
+  .mn__list li + li { border-top: 1px solid var(--u-line); }
+  .mn__list img { width: 36px; height: 54px; border-radius: 4px; object-fit: cover; }
+  .mn__name b { display: block; font-weight: 500; }
+  .mn__name small { color: var(--u-muted); font-size: 12px; }
+  .mn__bars { display: grid; gap: 6px; }
+  .mn__bar { display: block; height: 6px; border-radius: 3px; background: var(--u-fill-3); overflow: hidden; }
+  .mn__bar i { display: block; height: 100%; border-radius: 3px; }
+  .mn__pct { font-size: 11px; line-height: 1.35; color: var(--u-muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .mn__both { justify-self: end; font-style: normal; font-weight: 600; padding: 3px 8px; border-radius: 4px; background: var(--u-tint); color: var(--u-accent-text); }
+  .mn__list li.is-low .mn__both { background: var(--u-fill-2); color: var(--u-muted); }
+  @media (max-width: 639px) { .mn__list li { grid-template-columns: 32px minmax(0, 1fr) 72px 44px; gap: 10px; padding: 10px 14px; } .mn__pct, .mn__sort { display: none; } .mn-at { top: 16px; width: calc(100% - 32px); } }
+
   /* MOVIE NIGHT wide frame */
   #movie-night .frame--wide { margin-top: var(--s-7); }
 
@@ -168,7 +208,7 @@
            palette: the client's own (start.mjs brand: velvet #1c0f17, curtain #2a1722, light #f2e8da, usher #a38e99,
            brass #d9a956), pairing newsreader (forced: the app's own heading face), radius soft, lit ground sage
      effect: grain-gradient in the one [data-visual] frame (#reviews); card ground: none (the grain family has no second id)
-     moments: letters-assemble in #line (its own statement section), line-carries-colour in #movie-night (ground-surface)
+     moments: marquee-row (the six moods) as the last row of #reel, line-carries-colour in #movie-night (ground-surface); letters-assemble redealt on the client's feedback (an empty statement section)
      client slots: none; posters and backdrops from TMDB, credited in the footer -->
 
 <header class="nav">
@@ -366,10 +406,25 @@
     </div>
   </section>
 
-  <section class="section" id="line" data-moment="letters-assemble" aria-labelledby="line-h">
+  <section class="section" id="reel" aria-labelledby="reel-h">
     <div class="wrap">
-      <h2 class="mo-la__type" id="line-h">One line per film</h2>
-      <p class="mo-la__sub">Write it down. We'll take it from there. A sentence about the plot, the pace or the score is enough.</p>
+      <div class="grid">
+        <div class="span-5 stack-6">
+          <h2 id="reel-h">Spin the reel when you can't decide</h2>
+          <p class="t-lead">Critiq puts your top picks on a reel and spins it. Better matches land more often, so a 92% match comes up more than a 79% one.</p>
+          <p>Try it: the reel holds eight of the picks above.</p>
+        </div>
+        <div class="frame frame--split frame--lit span-6 start-7 reel" data-reel>
+          <div class="reel__machine">
+            <div class="reel__window"><div class="reel__strip" data-reel-strip></div></div>
+            <div class="reel__result" aria-live="polite"><span class="reel__tag">Tonight's feature</span><span class="reel__title" data-reel-title>Arrival</span><span class="reel__meta" data-reel-meta>2016 · 92% match · IMDb 7.9</span></div>
+            <button class="btn btn--secondary reel__btn" type="button" data-reel-spin>Spin the reel</button>
+          </div>
+        </div>
+      </div>
+      <div class="reel__moods" data-moment="marquee-row" data-moment-opts='{"speed": 32}'>
+        <ul class="mo-mq__track"><li>Something mind-bending</li><li>Edge-of-my-seat tense</li><li>A slow-burn crime story</li><li>Make me laugh</li><li>Something heartfelt</li><li>A show I can binge</li></ul>
+      </div>
     </div>
   </section>
 
@@ -466,7 +521,18 @@
         </div>
       </div>
       <div class="frame frame--wide frame--lit fill">
-        <div class="dg" data-diagram><script type="application/json">{"layout":"sync","size":"band","alt":"Your matches and your friend's matches for Arrival, Knives Out and Dark meet in the blend, which keeps the lower match of the two for each title.","left":{"label":"You","icon":"ui:user","meta":"Your ratings","rows":[{"label":"Arrival","meta":"92%"},{"label":"Knives Out","meta":"81%"},{"label":"Dark","meta":"88%"}]},"link":{"label":"Lower match wins","icon":"ui:users"},"right":{"label":"Your friend","icon":"ui:user","meta":"Their ratings","rows":[{"label":"Arrival","meta":"84%"},{"label":"Knives Out","meta":"90%"},{"label":"Dark","meta":"61%"}]}}</script></div>
+        <div class="stage stage--fade-b"><div class="mn-at">
+          <div class="ui ui-panel mn" role="img" aria-label="Critiq's movie night list for you and a friend, ranked by the lower match of each pair: Arrival 92% and 84%, Knives Out 81% and 90%, The Prestige 90% and 77%, Dark 88% and 61%, Parasite 83% and 58%">
+            <div class="mn__head"><span class="mn__t">Movie night</span><span class="mn__who"><i class="mn__k mn__k--you"></i>You <i class="mn__k mn__k--fr"></i>Your friend</span><span class="mn__sort">Ranked by the lower match</span></div>
+            <ul class="mn__list">
+              <li><img src="img/arrival.jpg" alt="" width="342" height="513" loading="lazy"><span class="mn__name"><b>Arrival</b><small>2016 · Denis Villeneuve</small></span><span class="mn__bars"><span class="mn__bar"><i style="width:92%"></i></span><span class="mn__bar mn__bar--fr"><i style="width:84%"></i></span></span><span class="mn__pct">92%<br>84%</span><em class="mn__both">84%</em></li>
+              <li><img src="img/knivesout.jpg" alt="" width="185" height="278" loading="lazy"><span class="mn__name"><b>Knives Out</b><small>2019 · Rian Johnson</small></span><span class="mn__bars"><span class="mn__bar"><i style="width:81%"></i></span><span class="mn__bar mn__bar--fr"><i style="width:90%"></i></span></span><span class="mn__pct">81%<br>90%</span><em class="mn__both">81%</em></li>
+              <li><img src="img/prestige.jpg" alt="" width="342" height="513" loading="lazy"><span class="mn__name"><b>The Prestige</b><small>2006 · Christopher Nolan</small></span><span class="mn__bars"><span class="mn__bar"><i style="width:90%"></i></span><span class="mn__bar mn__bar--fr"><i style="width:77%"></i></span></span><span class="mn__pct">90%<br>77%</span><em class="mn__both">77%</em></li>
+              <li class="is-low"><img src="img/dark.jpg" alt="" width="185" height="278" loading="lazy"><span class="mn__name"><b>Dark</b><small>2017 · Show</small></span><span class="mn__bars"><span class="mn__bar"><i style="width:88%"></i></span><span class="mn__bar mn__bar--fr"><i style="width:61%"></i></span></span><span class="mn__pct">88%<br>61%</span><em class="mn__both">61%</em></li>
+              <li class="is-low"><img src="img/parasite.jpg" alt="" width="185" height="278" loading="lazy"><span class="mn__name"><b>Parasite</b><small>2019 · Bong Joon Ho</small></span><span class="mn__bars"><span class="mn__bar"><i style="width:83%"></i></span><span class="mn__bar mn__bar--fr"><i style="width:58%"></i></span></span><span class="mn__pct">83%<br>58%</span><em class="mn__both">58%</em></li>
+            </ul>
+          </div>
+        </div></div>
       </div>
     </div>
   </section>
@@ -581,6 +647,44 @@
   </div>
 </footer>
 
+<script>
+/* Spin the reel: the app's weighted spin (app.py spin_dialog), on a click. Better matches weigh more. */
+(() => {
+  const root = document.querySelector('[data-reel]'); if (!root) return;
+  const picks = [
+    ['Arrival', 'arrival.jpg', '2016 · 92% match · IMDb 7.9', 92], ['The Prestige', 'prestige.jpg', '2006 · 90% match · IMDb 8.5', 90],
+    ['Dark', 'dark.jpg', '2017 · 89% match · IMDb 8.7', 89], ['Shutter Island', 'shutter.jpg', '2010 · 86% match · IMDb 8.2', 86],
+    ['Gone Girl', 'gonegirl.jpg', '2014 · 84% match · IMDb 8.1', 84], ['Parasite', 'parasite.jpg', '2019 · 83% match · IMDb 8.5', 83],
+    ['Prisoners', 'prisoners.jpg', '2013 · 82% match · IMDb 8.2', 82], ['Zodiac', 'zodiac.jpg', '2007 · 79% match · IMDb 7.7', 79]];
+  const strip = root.querySelector('[data-reel-strip]'), btn = root.querySelector('[data-reel-spin]');
+  const title = root.querySelector('[data-reel-title]'), meta = root.querySelector('[data-reel-meta]');
+  const laps = 5, reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  for (let l = 0; l <= laps; l++) for (const p of picks) {
+    const i = new Image(); i.src = 'img/' + p[1]; i.alt = l === 0 && p === picks[0] ? 'Poster for ' + p[0] : ''; i.width = 168; i.height = 252; i.loading = 'lazy'; strip.append(i);
+  }
+  let busy = false;
+  const cell = () => strip.firstElementChild.getBoundingClientRect().height;
+  const pick = () => {
+    const w = picks.map(p => (p[3] / 100) ** 6), sum = w.reduce((a, b) => a + b, 0);
+    let r = Math.random() * sum;
+    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return i; }
+    return 0;
+  };
+  btn.addEventListener('click', () => {
+    if (busy) return; busy = true; root.classList.add('is-spinning');
+    const win = pick(), stop = laps * picks.length + win, ms = reduce.matches ? 0 : 3400;
+    strip.style.transition = 'none'; strip.style.transform = 'translateY(0)';
+    void strip.offsetHeight;
+    strip.style.transition = ms ? 'transform ' + ms + 'ms cubic-bezier(.1,.55,.12,1)' : 'none';
+    strip.style.transform = 'translateY(' + (-stop * cell()) + 'px)';
+    setTimeout(() => {
+      strip.style.transition = 'none'; strip.style.transform = 'translateY(' + (-win * cell()) + 'px)';
+      title.textContent = picks[win][0]; meta.textContent = picks[win][2];
+      root.classList.remove('is-spinning'); busy = false;
+    }, ms + 40);
+  });
+})();
+</script>
 <script type="module" src="assets/system.js"></script>
 <script type="module" src="assets/motion/motion.js"></script>
 <script type="module" src="assets/layout/layout.js"></script>
