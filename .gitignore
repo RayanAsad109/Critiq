@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 data/
 .streamlit/secrets.toml
+landing/.taste-skill/
