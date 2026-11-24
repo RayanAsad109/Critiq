@@ -20,8 +20,13 @@ CSS = """
   --brass: #D9A956; --bulb: #F6D58E; --light: #F2E8DA; --usher: #A38E99;
   --sign: "Archivo", "Arial Narrow", sans-serif;     /* signage only: marquee, numbers, badges */
   --wine: #C4437C; --wine-empty: #4A2C3D;             /* rating stars */
+  --serif: "Instrument Serif", Georgia, serif;         /* headings, film titles, the home question */
+  --sans: "Geist", system-ui, sans-serif;              /* everything else */
 }
-.block-container { max-width: 1180px; padding-top: 2rem; padding-bottom: 3rem; }
+/* Instrument Serif has one weight and Geist is loaded at 400/500: never fake bold or italic */
+html { font-synthesis: none; }
+strong, b { font-weight: 500; }
+.block-container { max-width: 1300px; padding-top: 2rem; padding-bottom: 3rem; }
 header[data-testid="stHeader"] { background: transparent; }
 [data-testid="stHeaderActionElements"] { display: none !important; }   /* no link icons on headings */
 
@@ -49,13 +54,12 @@ h1, h2, h3, h4 { letter-spacing: -.005em; }
   -webkit-mask-composite: xor; mask-composite: exclude;
   animation: cq-power-on 1.4s steps(1) 1;
 }
-a.cq-home-link { text-decoration: none; }
 .cq-word {
   font-family: var(--sign); font-weight: 900; font-stretch: 62%; font-size: clamp(2.4rem, 5.5vw, 3.6rem);
   letter-spacing: .14em; line-height: 1; color: var(--brass);
   text-shadow: 0 0 22px rgba(217,169,86,.35);
 }
-.cq-tag { color: var(--usher); max-width: 30ch; line-height: 1.4; font-size: 1.02rem; font-style: italic; }
+.cq-tag { color: var(--usher); max-width: 30ch; line-height: 1.3; font-size: 1.3rem; font-family: var(--serif); font-style: italic; }
 @keyframes cq-power-on { 0% {opacity: .15} 20% {opacity: 1} 32% {opacity: .3} 45% {opacity: 1} }
 /* phones: two posters per row instead of one giant one */
 @media (max-width: 640px) {
@@ -72,7 +76,7 @@ a.cq-home-link { text-decoration: none; }
 .st-key-nav [data-baseweb="button-group"] { gap: .7rem !important; flex-wrap: wrap; }
 .st-key-nav button {
   border-radius: 999px !important; padding: .5rem 1.25rem !important; min-height: 2.6rem;
-  font-size: 1.02rem !important; border: 1px solid var(--seam) !important;
+  font-size: 1rem !important; font-weight: 500 !important; border: 1px solid var(--seam) !important;
   background: var(--curtain) !important;
 }
 .st-key-nav button:hover { border-color: var(--brass) !important; }
@@ -89,7 +93,7 @@ a.cq-home-link { text-decoration: none; }
 }
 .cq-noposter {
   display: flex; align-items: flex-end; padding: .8rem; box-sizing: border-box;
-  color: var(--usher); font-weight: 600; font-size: 1.1rem;
+  color: var(--usher); font-family: var(--serif); font-size: 1.3rem; line-height: 1.1;
 }
 .cq-stub {                          /* ticket stub with a punched notch */
   position: absolute; top: 10px; left: -5px; padding: .12rem .55rem .12rem .75rem;
@@ -104,11 +108,11 @@ a.cq-home-link { text-decoration: none; }
   background: rgba(28,15,23,.88); color: var(--bulb); border: 1px solid var(--brass);
   border-radius: 3px; font-family: var(--sign); font-weight: 700; font-size: .8rem;
 }
-.cq-title { font-weight: 600; margin-top: .6rem; line-height: 1.2; font-size: 1.08rem; }
-.cq-meta { color: var(--usher); font-size: .86rem; margin-top: .1rem; }
-.cq-text { min-height: 8.9rem; }     /* keeps buttons under cards in line */
+.cq-title { font-family: var(--serif); font-weight: 400; margin-top: .6rem; line-height: 1.12; font-size: 1.36rem; }
+.cq-meta { color: var(--usher); font-size: .88rem; margin-top: .15rem; }
+.cq-text { min-height: 9.4rem; }     /* keeps buttons under cards in line */
 .cq-review {
-  font-style: italic; color: #D8CBBE; font-size: .92rem; margin-top: .35rem; line-height: 1.4;
+  color: #D8CBBE; font-size: .92rem; margin-top: .35rem; line-height: 1.45;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .cq-reasons { list-style: none; padding: 0 !important; margin: .45rem 0 .2rem !important; font-size: .9rem; color: #CDBFB3; }
@@ -123,22 +127,38 @@ a.cq-home-link { text-decoration: none; }
 .cq-score .cq-stars { font-size: 2.3rem; }
 .cq-score .cq-stars-num { font-size: .55em; color: var(--light); }
 .cq-big { font-family: var(--sign); font-size: 3.2rem; font-weight: 900; font-stretch: 62%; color: var(--brass); line-height: 1; }
-.cq-big small { font-size: 1.3rem; color: var(--usher); font-weight: 600; }
-.cq-verdict { color: var(--light); font-size: 1.1rem; font-style: italic; }
+.cq-big small { font-size: 1.3rem; color: var(--usher); font-weight: 500; }
+.cq-verdict { color: var(--light); font-size: 1.45rem; font-family: var(--serif); font-style: italic; }
 
-/* ---- links on cards ---- */
-a.cq-link { color: inherit; text-decoration: none; }
-a.cq-link:hover { color: var(--bulb); }
-a.cq-cardlink { display: block; }
-a.cq-cardlink .cq-poster { transition: border-color .15s; }
-a.cq-cardlink:hover .cq-poster { border-color: var(--brass); }
-a.cq-link:focus-visible { outline: 2px solid var(--bulb); outline-offset: 3px; border-radius: 6px; }
+/* ---- posters open their details with a real button laid over the image (app.poster) ---- */
+[class*="st-key-pc-"], [class*="st-key-si-"] { position: relative; }
+[class*="st-key-poster-"] { position: absolute !important; top: 0; left: 0; width: 100% !important;
+  aspect-ratio: 2 / 3; z-index: 3; margin: 0 !important; }
+[class*="st-key-poster-"] .stButton, [class*="st-key-poster-"] button { width: 100%; height: 100%; }
+[class*="st-key-poster-"] button, .st-key-feature_open button, .st-key-brand_open button {
+  background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important;
+  min-height: 0 !important; color: transparent !important; cursor: pointer; transform: none !important;
+}
+[class*="st-key-poster-"] button p, .st-key-feature_open button p, .st-key-brand_open button p {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+[class*="st-key-poster-"] button:focus-visible, .st-key-feature_open button:focus-visible,
+.st-key-brand_open button:focus-visible { outline: 2px solid var(--bulb) !important; outline-offset: 3px; border-radius: 6px; }
+[class*="st-key-pc-"]:has([class*="st-key-poster-"] button:hover) .cq-poster,
+[class*="st-key-si-"]:has(button:hover) .cq-poster { border-color: var(--brass); }
+[class*="st-key-pc-"]:has([class*="st-key-poster-"] button:hover) .cq-title,
+[class*="st-key-si-"]:has(button:hover) .n { color: var(--bulb); }
+/* the marquee and the home hero are buttons too */
+.st-key-brand, .st-key-feature_screen { position: relative; }
+.st-key-brand_open, .st-key-feature_open { position: absolute !important; inset: 0; z-index: 3; margin: 0 !important; }
+.st-key-brand_open .stButton, .st-key-brand_open button,
+.st-key-feature_open .stButton, .st-key-feature_open button { width: 100%; height: 100%; }
+.st-key-feature_screen:has(.st-key-feature_open button:hover) .cq-feature-title { color: var(--bulb); }
 
 /* ---- home ---- */
 .cq-home { padding: 2.6rem 0 .6rem; max-width: 820px; }
-.cq-ask { font-size: clamp(2.7rem, 6.4vw, 4.8rem); line-height: 1.02; font-weight: 500;
-          letter-spacing: -.02em; margin: 0; font-variation-settings: "opsz" 72; }
-.cq-ask-sub { color: var(--usher); font-size: 1.25rem; line-height: 1.5; margin: 1.1rem 0 0; max-width: 48ch; }
+.cq-ask { font-family: var(--serif); font-size: clamp(3.2rem, 7.2vw, 5.9rem); line-height: .98; font-weight: 400;
+          letter-spacing: -.01em; margin: 0; }
+.cq-ask-sub { color: var(--usher); font-size: 1.2rem; line-height: 1.5; margin: 1.1rem 0 0; max-width: 48ch; }
 
 /* ---- details page: the title is projected onto its own backdrop ---- */
 .cq-screen {
@@ -153,19 +173,19 @@ a.cq-link:focus-visible { outline: 2px solid var(--bulb); outline-offset: 3px; b
     linear-gradient(0deg, rgba(28,15,23,.92) 0%, rgba(28,15,23,0) 50%);
 }
 .cq-screen-body { position: relative; padding: 2.4rem 2.6rem 2.2rem; max-width: 640px; }
-.cq-dtitle { font-size: clamp(2.4rem, 5vw, 3.9rem); font-weight: 600; line-height: 1.02;
-             letter-spacing: -.015em; margin: 0; font-variation-settings: "opsz" 72; }
-.cq-facts { color: #D8CBBE; font-size: 1.12rem; margin: .7rem 0 .2rem; }
-.cq-facts b { color: var(--light); font-weight: 600; }
+.cq-dtitle { font-family: var(--serif); font-size: clamp(2.9rem, 6.2vw, 4.9rem); font-weight: 400; line-height: .98;
+             letter-spacing: -.01em; margin: 0; }
+.cq-facts { color: #D8CBBE; font-size: 1.08rem; margin: .7rem 0 .2rem; }
+.cq-facts b { color: var(--light); font-weight: 500; }
 .cq-score-pill { display: inline-block; margin-left: .5rem; padding: .05rem .45rem; border: 1px solid var(--brass);
                  border-radius: 3px; color: var(--bulb); font-family: var(--sign); font-weight: 700;
                  font-size: .85rem; vertical-align: 2px; }
 .cq-screen .cq-chips { margin-top: .9rem; }
-.cq-tagline { font-style: italic; color: var(--bulb); font-size: 1.35rem; line-height: 1.35; margin: 0 0 .8rem; }
-.cq-overview { font-size: 1.15rem; line-height: 1.65; max-width: 64ch; }
+.cq-tagline { font-family: var(--serif); font-style: italic; color: var(--bulb); font-size: 1.7rem; line-height: 1.25; margin: 0 0 .8rem; }
+.cq-overview { font-size: 1.08rem; line-height: 1.7; max-width: 64ch; }
 .cq-billing { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 1rem 1.6rem; }
-.cq-billing .n { font-weight: 600; font-size: 1.05rem; line-height: 1.25; }
-.cq-billing .c { font-style: italic; color: var(--usher); font-size: .92rem; line-height: 1.3; }
+.cq-billing .n { font-weight: 500; font-size: 1rem; line-height: 1.25; }
+.cq-billing .c { color: var(--usher); font-size: .9rem; line-height: 1.3; }
 .cq-billing .r { color: var(--usher); font-size: .85rem; }
 .cq-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
 .cq-chip { background: rgba(42,23,34,.85); border: 1px solid var(--seam); border-radius: 3px;
@@ -174,11 +194,11 @@ a.cq-link:focus-visible { outline: 2px solid var(--bulb); outline-offset: 3px; b
 .cq-rows dt { color: var(--usher); font-size: .92rem; }
 .cq-rows dd { margin: 0; font-size: .98rem; }
 .cq-panel { border: 1px solid var(--seam); border-radius: 6px; padding: .9rem 1rem; margin-top: 1rem; }
-.cq-panel h5 { margin: 0 0 .6rem; font-size: 1.05rem; }
+.cq-panel h5 { margin: 0 0 .6rem; font-family: var(--serif); font-weight: 400; font-size: 1.4rem; }
 .cq-prov { display: flex; align-items: center; gap: .6rem; margin: .35rem 0; font-size: .98rem; }
 .cq-prov img { width: 28px; height: 28px; border-radius: 6px; }
-.cq-prov span.k { margin-left: auto; color: var(--usher); font-size: .85rem; font-style: italic; }
-.cq-fine { color: var(--usher); font-size: .8rem; margin-top: .5rem; }
+.cq-prov span.k { margin-left: auto; color: var(--usher); font-size: .85rem; }
+.cq-fine { color: var(--usher); font-size: .84rem; margin-top: .5rem; }
 .cq-fine a { color: var(--usher); }
 @media (max-width: 640px) { .cq-screen { min-height: 380px; } .cq-screen-body { padding: 1.4rem; } }
 
@@ -187,7 +207,8 @@ a.cq-link:focus-visible { outline: 2px solid var(--bulb); outline-offset: 3px; b
   border: 1px dashed var(--seam); border-radius: 6px; padding: 2.2rem 1.6rem;
   color: var(--usher); line-height: 1.5; max-width: 60ch;
 }
-.cq-empty strong { color: var(--light); display: block; font-size: 1.2rem; margin-bottom: .3rem; }
+.cq-empty strong { color: var(--light); display: block; font-family: var(--serif); font-weight: 400;
+  font-size: 1.7rem; line-height: 1.15; margin-bottom: .35rem; }
 .cq-foot {
   margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--seam);
   color: var(--usher); font-size: .84rem; line-height: 1.5;
@@ -198,8 +219,8 @@ a.cq-link:focus-visible { outline: 2px solid var(--bulb); outline-offset: 3px; b
 
 
 def header_html(tagline: str = "Write it down. We'll take it from there.") -> str:
-    return (f'<div class="cq-head"><a class="cq-home-link" href="?page=Home" target="_self" '
-            f'aria-label="Critiq home"><div class="cq-marquee"><span class="cq-word">CRITIQ</span></div></a>'
+    """The marquee. app.py lays a real "Critiq home" button over it (no link, no reload)."""
+    return (f'<div class="cq-head"><div class="cq-marquee"><span class="cq-word">CRITIQ</span></div>'
             f'<div class="cq-tag">{escape(tagline)}</div></div>')
 
 
@@ -214,7 +235,9 @@ def meta_line(t: dict, extra: str = "") -> str:
 
 def poster_card(t: dict, *, stub: float | None = None, match: int | None = None,
                 review: str = "", reasons: list[str] | None = None, extra_meta: str = "",
-                show_text: bool = True, even: bool = False, href: str | None = None) -> str:
+                show_text: bool = True, even: bool = False) -> str:
+    """Poster plus title, meta and extras. No link: app.py lays a real button over the
+    poster, so opening a title stays inside the session instead of reloading the app."""
     title = escape(t.get("title", "?"))
     if t.get("poster"):
         img = f'<img class="cq-poster" src="{escape(t["poster"])}" alt="Poster for {title}" loading="lazy">'
@@ -225,8 +248,7 @@ def poster_card(t: dict, *, stub: float | None = None, match: int | None = None,
         badges += f'<span class="cq-match">{match}% match</span>'
     body = ""
     if show_text:
-        title_html = f'<a class="cq-link" href="{escape(href)}" target="_self">{title}</a>' if href else title
-        body = (f'<div class="cq-title">{title_html}</div>'
+        body = (f'<div class="cq-title">{title}</div>'
                 f'<div class="cq-meta">{escape(meta_line(t, extra_meta))}</div>')
         if stub is not None:
             body += f'<div class="cq-cardstars">{stars_html(stub)}</div>'
@@ -236,11 +258,7 @@ def poster_card(t: dict, *, stub: float | None = None, match: int | None = None,
             body += '<ul class="cq-reasons">' + "".join(f"<li>{escape(r)}</li>" for r in reasons) + "</ul>"
     if even:
         body = f'<div class="cq-text">{body}</div>'
-    card = f'<div class="cq-card">{img}{badges}</div>'
-    if href:
-        card = (f'<a class="cq-link cq-cardlink" href="{escape(href)}" target="_self" '
-                f'aria-label="Details for {title}">{card}</a>')
-    return f'{card}{body}'
+    return f'<div class="cq-card">{img}{badges}</div>{body}'
 
 
 def home_html(when: str, n_rated: int) -> str:
@@ -383,12 +401,8 @@ EFFECTS_CSS = """
 }
 .cq-reel-strip .cq-poster { width: 220px; height: 330px; aspect-ratio: auto; border-radius: 0; border: 0; }
 .cq-reel-result { text-align: center; opacity: 0; }
-.cq-reel-result .t { font-size: 1.6rem; font-weight: 600; line-height: 1.15; }
+.cq-reel-result .t { font-family: var(--serif); font-size: 2.2rem; font-weight: 400; line-height: 1.05; }
 .cq-reel-result .m { color: var(--usher); margin-top: .2rem; }
-a.cq-btnlink {
-  display: inline-block; margin-top: .9rem; padding: .5rem 1.1rem; border-radius: 4px;
-  background: var(--brass); color: var(--velvet) !important; text-decoration: none; font-weight: 600;
-}
 
 /* movie night: two fit bars */
 .cq-fit { display: grid; grid-template-columns: 3.6rem 1fr 2.4rem; align-items: center; gap: .45rem;
@@ -406,7 +420,7 @@ a.cq-btnlink {
 """
 
 
-def reel_html(titles: list[dict], winner: int, href: str, spin_id: str) -> str:
+def reel_html(titles: list[dict], winner: int, spin_id: str) -> str:
     """A strip of posters that spins and lands on titles[winner]."""
     laps = 5
     strip = titles * (laps + 1)
@@ -420,8 +434,7 @@ def reel_html(titles: list[dict], winner: int, href: str, spin_id: str) -> str:
             f'.cq-reel-result.s{spin_id} {{ animation: cq-fade .4s ease 3.4s forwards; }}</style>'
             f'<div class="cq-reel-window"><div class="cq-reel-strip s{spin_id}">{cells}</div></div>'
             f'<div class="cq-reel-result s{spin_id}"><div class="t">{escape(w["title"])}</div>'
-            f'<div class="m">{meta}</div>'
-            f'<a class="cq-btnlink" href="{escape(href)}" target="_self">Tonight\'s feature: see details</a></div>')
+            f'<div class="m">{meta}</div></div>')
 
 
 def fit_html(you: int, friend: int, friend_name: str) -> str:
@@ -437,7 +450,7 @@ def fit_html(you: int, friend: int, friend_name: str) -> str:
 HOME_CSS = """
 <style>
 .cq-feature {
-  position: relative; min-height: 520px; border-radius: 10px; overflow: hidden;
+  position: relative; min-height: max(480px, 58vh); border-radius: 12px; overflow: hidden;
   border: 1px solid var(--seam); display: flex; align-items: flex-end;
   background-color: var(--velvet); background-repeat: no-repeat;
   background-size: cover; background-position: center 25%;
@@ -457,49 +470,73 @@ HOME_CSS = """
 .cq-feature::before { left: 0; box-shadow: 6px 0 14px rgba(0,0,0,.5); }
 .cq-feature::after { right: 0; box-shadow: -6px 0 14px rgba(0,0,0,.5); }
 @keyframes cq-feature-in { from { clip-path: inset(0 50% 0 50%); } to { clip-path: inset(0 0 0 0); } }
-.cq-feature-body { position: relative; z-index: 2; padding: 2.4rem 3.4rem 6.2rem; max-width: 700px; }
-.cq-feature-ask { font-size: clamp(2.2rem, 4.6vw, 3.4rem); line-height: 1.04; font-weight: 500;
-                  letter-spacing: -.02em; margin: 0 0 1.6rem; font-variation-settings: "opsz" 72; }
-.cq-feature-label { color: var(--bulb); font-style: italic; font-size: 1.1rem; margin-bottom: .2rem; }
-.cq-feature-title { font-size: clamp(2rem, 3.6vw, 2.8rem); font-weight: 600; line-height: 1.05; margin: 0;
-                    font-variation-settings: "opsz" 72; }
-.cq-feature-title a { color: var(--light); text-decoration: none; }
-.cq-feature-title a:hover { color: var(--bulb); }
-.cq-feature-facts { color: #D8CBBE; font-size: 1.05rem; margin: .55rem 0 0; }
+.cq-feature-body { position: relative; z-index: 2; padding: 2.6rem 3.8rem 6.6rem; max-width: 820px; }
+.cq-feature-ask { font-family: var(--serif); font-size: clamp(2.9rem, 5.9vw, 4.6rem); line-height: .98; font-weight: 400;
+                  letter-spacing: -.01em; margin: 0 0 1.8rem; }
+.cq-feature-label { color: var(--bulb); font-family: var(--serif); font-style: italic; font-size: 1.45rem; margin-bottom: .15rem; }
+.cq-feature-title { font-family: var(--serif); font-size: clamp(2.6rem, 4.8vw, 3.9rem); font-weight: 400; line-height: 1;
+                    margin: 0; color: var(--light); transition: color .2s ease; }
+.cq-feature-facts { color: #D8CBBE; font-size: 1.05rem; margin: .6rem 0 0; }
 .cq-feature-facts + .cq-feature-facts { margin-top: .15rem; color: var(--bulb); }
-.cq-feature-why { margin-top: .45rem; }
-.cq-feature-why { color: #D8CBBE; font-style: italic; font-size: 1.05rem; }
+.cq-feature-why { margin-top: .45rem; color: #D8CBBE; font-size: 1.05rem; max-width: 56ch; }
 /* the action buttons are Streamlit widgets, lifted up into the bottom of the screen */
-.st-key-feature_actions { margin-top: -5.4rem; padding: 0 3.4rem; position: relative; z-index: 5; }
+.st-key-feature_actions { margin-top: -5.6rem; padding: 0 3.8rem; position: relative; z-index: 5; }
 
-.cq-stats-line { color: var(--usher); font-style: italic; font-size: 1.05rem; margin: .2rem 0 0; }
+.cq-stats-line { color: var(--usher); font-size: 1rem; margin: .2rem 0 0; }
 
-/* horizontal rows styled as a strip of film, sprocket holes and all */
-.cq-strip-title { font-size: 1.35rem; font-weight: 600; margin: 1.4rem 0 .5rem; }
-.cq-strip {
-  display: flex; gap: .9rem; overflow-x: auto; scroll-snap-type: x proximity;
-  padding: 24px 16px 22px; border-radius: 6px; border: 1px solid #2a1620;
+/* horizontal rows styled as a strip of film, sprocket holes and all.
+   app.strip() builds a horizontal st.container(key="strip-...") of keyed items ("si-..."). Streamlit
+   may put a key on the flex row itself or on a stLayoutWrapper around it, so both are covered. */
+.cq-strip-title { font-family: var(--serif); font-size: 1.9rem; font-weight: 400; margin: 1.6rem 0 .4rem; }
+:root { --strip-w: 180px; }
+@media (max-width: 1024px) { :root { --strip-w: 140px; } }
+@media (max-width: 640px)  { :root { --strip-w: 120px; } }
+[class*="st-key-strip-"] { width: 100% !important; max-width: 100%; min-width: 0; }
+[class*="st-key-strip-"][data-testid="stHorizontalBlock"], [class*="st-key-strip-"] [data-testid="stHorizontalBlock"], .cq-strip {
+  display: flex !important; flex-wrap: nowrap !important; gap: 1rem !important;
+  width: 100% !important; max-width: 100%; min-width: 0; box-sizing: border-box;
+  overflow-x: auto !important; overflow-y: hidden; scroll-snap-type: x mandatory; scroll-padding-inline: 16px;
+  overscroll-behavior-x: contain; scrollbar-width: none;
+  padding: 28px 16px 22px; border-radius: 6px; border: 1px solid #2a1620;
   background:
     repeating-linear-gradient(90deg, rgba(242,232,218,.15) 0 10px, transparent 10px 22px) 8px 7px / 100% 8px no-repeat local,
     repeating-linear-gradient(90deg, rgba(242,232,218,.15) 0 10px, transparent 10px 22px) 8px calc(100% - 7px) / 100% 8px no-repeat local,
     #110910;
-  scrollbar-width: thin; scrollbar-color: var(--brass) transparent;
 }
-.cq-strip::-webkit-scrollbar { height: 6px; }
-.cq-strip::-webkit-scrollbar-thumb { background: var(--brass); border-radius: 3px; }
-a.cq-strip-item { flex: 0 0 148px; scroll-snap-align: start; color: var(--light); text-decoration: none; }
-a.cq-strip-item .cq-poster { width: 148px; }
-a.cq-strip-item:hover .cq-poster { border-color: var(--brass); }
-a.cq-strip-item:focus-visible { outline: 2px solid var(--bulb); outline-offset: 3px; border-radius: 6px; }
+[class*="st-key-strip-"][data-testid="stHorizontalBlock"]::-webkit-scrollbar,
+[class*="st-key-strip-"] [data-testid="stHorizontalBlock"]::-webkit-scrollbar, .cq-strip::-webkit-scrollbar { display: none; }
+/* every item the same fixed width, whatever the number of items: never grow, never shrink */
+[class*="st-key-si-"], [class*="st-key-strip-"] [data-testid="stLayoutWrapper"]:has([class*="st-key-si-"]) {
+  flex: 0 0 var(--strip-w) !important; width: var(--strip-w) !important;
+  min-width: var(--strip-w) !important; max-width: var(--strip-w) !important; scroll-snap-align: start; }
+[class*="st-key-si-"] { gap: 0 !important; }
+.cq-strip-item { color: var(--light); }
+.cq-strip-item .cq-poster { width: 100%; aspect-ratio: 2 / 3; }
 .cq-strip-item .n { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-                    margin-top: .45rem; font-size: .95rem; line-height: 1.2; }
-.cq-strip-item .y { color: var(--usher); font-size: .8rem; }
+                    text-overflow: ellipsis; margin-top: .55rem; font-family: var(--sans); font-weight: 500;
+                    font-size: 15px; line-height: 1.3; }
+.cq-strip-item .y { display: block; color: var(--usher); font-family: var(--sans); font-size: 13px; margin-top: .15rem; }
+/* a soft fade at the right edge while there's more to scroll; it lifts at the end of the row.
+   Driven by the row's own scroll position; a row that can't scroll gets no fade. */
+@supports (animation-timeline: scroll(self inline)) {
+  [class*="st-key-strip-"][data-testid="stHorizontalBlock"], [class*="st-key-strip-"] [data-testid="stHorizontalBlock"] {
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
+            mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-size: calc(100% + 72px) 100%; mask-size: calc(100% + 72px) 100%;
+    animation: cq-strip-fade linear both; animation-timeline: scroll(self inline);
+  }
+  @keyframes cq-strip-fade {
+    from { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+    92%  { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+    to   { -webkit-mask-size: calc(100% + 72px) 100%; mask-size: calc(100% + 72px) 100%; }
+  }
+}
 
 @media (max-width: 640px) {
-  .cq-feature { min-height: 520px; }
-  .cq-feature-body { padding: 1.6rem 1.6rem 7.6rem 2.6rem; }
-  .st-key-feature_actions { padding: 0 1.2rem 0 2.6rem; margin-top: -7rem; }
-  a.cq-strip-item { flex-basis: 118px; }  a.cq-strip-item .cq-poster { width: 118px; }
+  .cq-feature { min-height: 480px; }
+  .cq-feature-body { padding: 1.6rem 1.4rem 8rem 2.6rem; }
+  .st-key-feature_actions { padding: 0 1.2rem 0 2.6rem; margin-top: -7.4rem; }
 }
 @media (prefers-reduced-motion: reduce) { .cq-feature { animation: none; } }
 </style>
@@ -511,27 +548,25 @@ FEATURE_SHADE = ("linear-gradient(90deg, rgba(28,15,23,.97) 0%, rgba(28,15,23,.8
                  "linear-gradient(0deg, rgba(28,15,23,.95) 0%, rgba(28,15,23,0) 55%)")
 
 
-def feature_html(t: dict, when: str, label: str, facts: list[str], why: str, href: str) -> str:
+def feature_html(t: dict, when: str, label: str, facts: list[str], why: str) -> str:
+    """The home hero. app.py lays a real button over it that opens the title's details."""
     bg = (f' style="background-image:{FEATURE_SHADE}, url({escape(t["backdrop"])})"'
           if t.get("backdrop") else "")
     why_html = f'<div class="cq-feature-why">{escape(why)}</div>' if why else ""
     return (f'<section class="cq-feature"{bg}><div class="cq-feature-body">'
             f'<p class="cq-feature-ask">What\'s your next watch {escape(when)}?</p>'
             f'<div class="cq-feature-label">{escape(label)}</div>'
-            f'<h2 class="cq-feature-title"><a href="{escape(href)}" target="_self">{escape(t["title"])}</a></h2>'
+            f'<h2 class="cq-feature-title">{escape(t["title"])}</h2>'
             + "".join(f'<div class="cq-feature-facts">{escape(f)}</div>' for f in facts if f)
             + f'{why_html}</div></section>')
 
 
-def strip_html(title: str, items: list[dict], link_fn) -> str:
-    cells = []
-    for t in items:
-        poster = (f'<img class="cq-poster" src="{escape(t["poster"])}" alt="" loading="lazy">'
-                  if t.get("poster") else f'<div class="cq-poster cq-noposter">{escape(t["title"])}</div>')
-        cells.append(f'<a class="cq-strip-item" href="{escape(link_fn(t["key"]))}" target="_self">{poster}'
-                     f'<span class="n">{escape(t["title"])}</span><span class="y">{escape(meta_line(t))}</span></a>')
-    return (f'<h3 class="cq-strip-title">{escape(title)}</h3>'
-            f'<div class="cq-strip">{"".join(cells)}</div>')
+def strip_item_html(t: dict) -> str:
+    """One poster in a film strip (app.py lays it out and adds the button that opens it)."""
+    poster = (f'<img class="cq-poster" src="{escape(t["poster"])}" alt="" loading="lazy">'
+              if t.get("poster") else f'<div class="cq-poster cq-noposter">{escape(t["title"])}</div>')
+    return (f'<div class="cq-strip-item">{poster}<span class="n">{escape(t["title"])}</span>'
+            f'<span class="y">{escape(meta_line(t))}</span></div>')
 
 
 def stats_line(n: int, avg: float, vs_imdb: float | None) -> str:
@@ -684,11 +719,10 @@ html { scroll-behavior: smooth; }
 /* never inside the reel: its strip moves through a clipped window, so view() would keep them hidden */
 .cq-reel-strip .cq-card { animation: none !important; opacity: 1; transform: none; }
 /* film strips: items deal in one after another on load */
-.cq-strip-item { animation: cq-rise-in .7s cubic-bezier(.2,.8,.2,1) both; }
-.cq-strip-item:nth-child(2) { animation-delay: .05s; } .cq-strip-item:nth-child(3) { animation-delay: .1s; }
-.cq-strip-item:nth-child(4) { animation-delay: .15s; } .cq-strip-item:nth-child(5) { animation-delay: .2s; }
-.cq-strip-item:nth-child(6) { animation-delay: .25s; } .cq-strip-item:nth-child(7) { animation-delay: .3s; }
-.cq-strip-item:nth-child(n+8) { animation-delay: .35s; }
+[class*="st-key-si-"] { animation: cq-rise-in .7s cubic-bezier(.2,.8,.2,1) both; }
+[class*="st-key-si-"]:nth-child(2) { animation-delay: .05s; } [class*="st-key-si-"]:nth-child(3) { animation-delay: .1s; }
+[class*="st-key-si-"]:nth-child(4) { animation-delay: .15s; } [class*="st-key-si-"]:nth-child(5) { animation-delay: .2s; }
+[class*="st-key-si-"]:nth-child(6) { animation-delay: .25s; } [class*="st-key-si-"]:nth-child(n+7) { animation-delay: .3s; }
 
 /* ---- TiltedCard + glare: posters lift and catch light on hover ---- */
 .cq-card { border-radius: 6px; transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease; }
@@ -700,15 +734,15 @@ html { scroll-behavior: smooth; }
   transition: background-position .8s cubic-bezier(.2,.8,.2,1), opacity .3s ease;
 }
 .cq-card .cq-stub, .cq-card .cq-match { z-index: 2; }
-a.cq-cardlink:hover .cq-card, a.cq-cardlink:focus-visible .cq-card {
+[class*="st-key-pc-"]:has([class*="st-key-poster-"] button:hover) .cq-card,
+[class*="st-key-pc-"]:has([class*="st-key-poster-"] button:focus-visible) .cq-card {
   transform: translateY(-6px) rotate(-.4deg) scale(1.02);
   box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(217,169,86,.5), 0 0 30px rgba(217,169,86,.18);
 }
-a.cq-cardlink:hover .cq-card::after { opacity: 1; background-position: -30% 0; }
-a.cq-cardlink:hover .cq-poster { filter: brightness(1.06) saturate(1.08); }
-a.cq-strip-item .cq-poster { transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease, border-color .3s ease; }
-a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-shadow: 0 14px 30px rgba(0,0,0,.55), 0 0 22px rgba(217,169,86,.2); }
-.cq-strip { padding-top: 28px; }
+[class*="st-key-pc-"]:has([class*="st-key-poster-"] button:hover) .cq-card::after { opacity: 1; background-position: -30% 0; }
+[class*="st-key-pc-"]:has([class*="st-key-poster-"] button:hover) .cq-poster { filter: brightness(1.06) saturate(1.08); }
+.cq-strip-item .cq-poster { transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease, border-color .3s ease; }
+[class*="st-key-si-"]:has(button:hover) .cq-poster { transform: translateY(-5px) scale(1.04); box-shadow: 0 14px 30px rgba(0,0,0,.55), 0 0 22px rgba(217,169,86,.2); }
 
 /* ---- match badges carry a slow sheen ---- */
 .cq-match, .cq-score-pill {
@@ -736,13 +770,13 @@ a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-
 /* ---- buttons: brass primary that glows, quiet secondary that lights its edge ---- */
 [data-testid="stBaseButton-primary"] {
   background: linear-gradient(180deg, #E4B865, var(--brass)) !important; color: var(--velvet) !important;
-  border: 0 !important; font-weight: 600 !important;
+  border: 0 !important; font-weight: 500 !important;
   box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 6px 18px rgba(217,169,86,.25);
   transition: transform .2s ease, box-shadow .25s ease, filter .2s ease !important;
 }
 [data-testid="stBaseButton-primary"]:hover { transform: translateY(-2px); filter: brightness(1.05);
   box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 10px 28px rgba(217,169,86,.42); }
-[data-testid="stBaseButton-primary"]:active { transform: translateY(0) scale(.98); }
+
 [data-testid="stBaseButton-primary"] p, [data-testid="stBaseButton-primary"] span { color: var(--velvet) !important; }
 [data-testid="stBaseButton-secondary"], [data-testid="stPopover"] button {
   background: rgba(42,23,34,.78) !important; border: 1px solid var(--seam) !important;
@@ -752,7 +786,7 @@ a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-
   border-color: var(--brass) !important; transform: translateY(-1px); background: rgba(58,32,48,.9) !important;
   box-shadow: 0 6px 20px rgba(0,0,0,.35), 0 0 0 1px rgba(217,169,86,.25);
 }
-[data-testid="stBaseButton-secondary"]:active { transform: scale(.98); }
+
 .st-key-feature_actions [data-testid="stBaseButton-secondary"] {
   background: rgba(28,15,23,.55) !important; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
@@ -806,8 +840,31 @@ a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-
 .cq-fit .bar i { animation: cq-fill 1.1s cubic-bezier(.2,.8,.2,1) .2s both; transform-origin: left center; }
 @keyframes cq-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
+/* ---- pressed: every button and pill answers the instant it's pressed ---- */
+button:active, [data-testid^="stBaseButton"]:active, [data-testid="stPopover"] button:active,
+.st-key-nav button:active, [data-testid="stButtonGroup"] button:active {
+  transform: translateY(1px) scale(.97) !important; filter: brightness(.88);
+  transition-duration: 0s !important;
+}
+[data-testid="stBaseButton-primary"]:active { box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 2px 6px rgba(217,169,86,.25) !important; }
+[data-testid="stBaseButton-secondary"]:active, [data-testid="stButtonGroup"] button:active {
+  background: rgba(69,41,58,.95) !important; border-color: var(--brass) !important; }
+/* the invisible poster / hero / marquee buttons press the picture under them instead */
+[class*="st-key-poster-"] button:active, .st-key-feature_open button:active, .st-key-brand_open button:active {
+  transform: none !important; filter: none; background: transparent !important; }
+[class*="st-key-pc-"]:has([class*="st-key-poster-"] button:active) .cq-card,
+[class*="st-key-si-"]:has(button:active) .cq-poster { transform: scale(.97) !important; transition-duration: 0s !important; }
+.st-key-brand:has(button:active) .cq-marquee { transform: scale(.97); }
+
+/* ---- type: Geist on every control ---- */
+button, input, textarea, select, [data-baseweb="select"], [data-testid="stWidgetLabel"] { font-family: var(--sans); }
+button p { font-weight: 500; }
+[data-testid="stDialog"] h3 { font-size: 2.2rem; line-height: 1.05; }
+
 @media (max-width: 640px) {
   .st-key-nav { top: .3rem; border-radius: 18px; }
+  .st-key-nav button { padding: .45rem .9rem !important; font-size: .95rem !important; }
+  .cq-tag { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -815,8 +872,9 @@ a.cq-strip-item:hover .cq-poster { transform: translateY(-5px) scale(1.04); box-
   .cq-feature-why, .cq-screen .cq-facts, .cq-screen .cq-chips, .cq-feature, .cq-screen, .cq-card, .cq-strip-item,
   .cq-match, .cq-score-pill, .cq-reasons li, .cq-empty, .cq-reel-window, .cq-fit .bar i, .cq-reel-result .t,
   [data-testid="stDialog"] [role="dialog"] { animation: none !important; }
-  .cq-card, .cq-card::after, .cq-poster, a.cq-strip-item .cq-poster { transition: none !important; }
-  a.cq-cardlink:hover .cq-card, a.cq-strip-item:hover .cq-poster { transform: none; }
+  [class*="st-key-si-"] { animation: none !important; }
+  .cq-card, .cq-card::after, .cq-poster { transition: none !important; }
+  [class*="st-key-pc-"]:has(button:hover) .cq-card, [class*="st-key-si-"]:has(button:hover) .cq-poster { transform: none !important; }
 }
 </style>
 """
@@ -839,7 +897,7 @@ SKELETON_CSS = """
 .cq-sk-bar { height: 1rem; border-radius: 4px; }
 
 /* home: tonight's feature, then the actions, then film-strip rows */
-.cq-sk-hero { position: relative; min-height: 520px; border-radius: 10px; border: 1px solid var(--seam); background: #221219;
+.cq-sk-hero { position: relative; min-height: max(480px, 58vh); border-radius: 12px; border: 1px solid var(--seam); background: #221219;
   display: flex; flex-direction: column; justify-content: flex-end; gap: .8rem; padding: 2.4rem 3.4rem 2.6rem; }
 .cq-sk-ask { height: 2.8rem; width: min(560px, 80%); }
 .cq-sk-ask.b { width: min(300px, 50%); margin-bottom: 1rem; }
@@ -853,7 +911,7 @@ SKELETON_CSS = """
 .cq-sk-strip-title { width: 15rem; height: 1.4rem; margin: .4rem 0 .5rem; }
 .cq-sk-strip { display: flex; gap: .9rem; overflow: hidden; padding: 24px 16px 22px; border-radius: 6px;
   border: 1px solid #2a1620; background: #110910; }
-.cq-sk-poster { flex: 0 0 148px; aspect-ratio: 2 / 3; }
+.cq-sk-poster { flex: 0 0 var(--strip-w, 180px); aspect-ratio: 2 / 3; }
 
 /* grid: recommendation cards, poster then two lines */
 .cq-sk-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.6rem 1.4rem; }
@@ -869,8 +927,7 @@ img.cq-poster { background-color: #2A1722; animation: cq-poster-in .3s ease both
 .cq-reel-strip img.cq-poster { animation: none; }
 
 @media (max-width: 640px) {
-  .cq-sk-hero { min-height: 420px; padding: 1.6rem; }
-  .cq-sk-poster { flex-basis: 118px; }
+  .cq-sk-hero { min-height: 480px; padding: 1.6rem; }
   .cq-sk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cq-sk-btn { width: 7.5rem; }
 }
@@ -1042,6 +1099,21 @@ def app_wall_html(posters: list[str]) -> str:
 # Sign-in: a cinema ticket in front of a slowly drifting wall of this
 # week's trending posters.
 # =====================================================================
+_G_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
+            '<path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/>'
+            '<path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/>'
+            '<path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.6 10.7l7.9-6.1z"/>'
+            '<path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.2-13.5-10l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>')
+# st.html strips inline <svg>, so the Google "G" goes in as a percent-encoded image in the CSS
+GOOGLE_G_URI = "data:image/svg+xml," + __import__("urllib.parse", fromlist=["quote"]).quote(_G_SVG, safe="")
+
+# The ticket is Streamlit layout so its Google button can be a real st.button:
+#   st.container(key="door")                     centres everything over the wall
+#     st.container(key="ticket")                 the paper ticket, notched at --cut
+#       st.columns([63, 37], gap=None)           main part | stub (stacked on phones)
+#         st.html(ticket_main_html(...))
+#         st.container(key="ticket_stub")        TEAR HERE, the Google button, the note
+#     st.html(DOOR_LINK)
 SIGNIN_CSS = """
 <style>
 .cq-wall-shade { position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -1049,88 +1121,102 @@ SIGNIN_CSS = """
     radial-gradient(ellipse 60% 55% at 50% 48%, rgba(28,15,23,.55) 0%, rgba(28,15,23,.82) 72%, #1C0F17 100%),
     rgba(28,15,23,.35); }
 
-.cq-door { position: relative; z-index: 1; min-height: 78vh; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 1.4rem; padding: 2rem 0; }
-.cq-ticket { --cut: 63%; display: flex; width: min(680px, 100%); color: #2A1722;
-  background: #F2E8DA; border-radius: 10px; box-shadow: 0 24px 60px rgba(0,0,0,.55);
-  -webkit-mask: radial-gradient(circle 13px at var(--cut) 0, #0000 97%, #000) top / 100% 51% no-repeat,
-                radial-gradient(circle 13px at var(--cut) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
-          mask: radial-gradient(circle 13px at var(--cut) 0, #0000 97%, #000) top / 100% 51% no-repeat,
-                radial-gradient(circle 13px at var(--cut) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+.st-key-door { position: relative; z-index: 1; min-height: 78vh; justify-content: center; align-items: center;
+  gap: 1.4rem; padding: 2rem 0; }
+/* centred whichever element Streamlit puts the key on (the block, or a stLayoutWrapper around it) */
+.st-key-door [data-testid="stLayoutWrapper"]:has(.st-key-ticket), .st-key-ticket {
+  width: min(820px, 100%) !important; max-width: 100%; margin-inline: auto !important; align-self: center !important; }
+.st-key-ticket { --cut: 63%; --notch: 16px; flex: none; gap: 0; color: #2A1722;
+  background: #F2E8DA; border-radius: 12px; box-shadow: 0 28px 70px rgba(0,0,0,.55);
+  -webkit-mask: radial-gradient(circle var(--notch) at var(--cut) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle var(--notch) at var(--cut) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+          mask: radial-gradient(circle var(--notch) at var(--cut) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle var(--notch) at var(--cut) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
   animation: cq-arrive .7s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes cq-arrive { from { opacity: 0; transform: translateY(18px) rotate(-1.5deg); } }
-.cq-t-main { flex: 0 0 var(--cut); padding: 1.6rem 1.7rem 1.4rem; border-right: 2px dashed #B9A78F; }
-.cq-t-admit { font-family: var(--sign); font-weight: 700; font-size: .72rem; letter-spacing: .32em;
+.st-key-ticket [data-testid="stHorizontalBlock"] { gap: 0 !important; align-items: stretch; }
+.st-key-ticket [data-testid="stColumn"]:first-child { border-right: 2px dashed #B9A78F; }
+.st-key-ticket [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"] { height: 100%; justify-content: center; }
+.cq-t-main { padding: 1.9rem 2.05rem 1.7rem; }
+.cq-t-admit { font-family: var(--sign); font-weight: 700; font-size: .86rem; letter-spacing: .32em;
   color: #8A5A12; }
-.cq-t-name { font-family: var(--sign); font-weight: 900; font-stretch: 75%; font-size: 3.6rem;
-  line-height: .95; letter-spacing: .06em; color: #2A1722; margin: .35rem 0 .4rem; }
-.cq-t-line { font-style: italic; font-size: 1.05rem; color: #5A4250; margin: 0 0 1.2rem; }
-.cq-t-facts { display: flex; flex-wrap: wrap; gap: .6rem 1.6rem; border-top: 1px solid #D8C8B2; padding-top: .8rem; }
-.cq-t-fact span { display: block; font-family: var(--sign); font-size: .66rem; font-weight: 700;
+.cq-t-name { font-family: var(--sign); font-weight: 900; font-stretch: 75%; font-size: 4.3rem;
+  line-height: .95; letter-spacing: .06em; color: #2A1722; margin: .42rem 0 .5rem; }
+.cq-t-line { font-family: var(--serif); font-style: italic; font-size: 1.56rem; line-height: 1.3; color: #5A4250;
+  margin: 0 0 1.45rem; }
+.cq-t-facts { display: flex; flex-wrap: wrap; gap: .7rem 1.9rem; border-top: 1px solid #D8C8B2; padding-top: .95rem; }
+.cq-t-fact span { display: block; font-family: var(--sign); font-size: .8rem; font-weight: 700;
   letter-spacing: .14em; color: #8A7480; }
-.cq-t-fact b { font-family: var(--sign); font-weight: 700; font-size: 1rem; color: #2A1722; white-space: nowrap; }
-.cq-t-stub { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: .7rem; padding: 1.2rem .9rem; text-align: center; min-width: 0; transition: transform .25s ease; transform-origin: left center; }
-.cq-ticket:hover .cq-t-stub { transform: rotate(2.5deg) translateX(3px); }
-.cq-t-tear { font-family: var(--sign); font-size: .66rem; font-weight: 700; letter-spacing: .14em; color: #8A7480; }
-a.cq-google { display: inline-flex; align-items: center; gap: .55rem; background: #fff; color: #1f1f1f !important;
-  text-decoration: none !important; font-family: Roboto, Arial, sans-serif; font-size: .92rem; font-weight: 500;
-  padding: .55rem .85rem; border-radius: 999px; border: 1px solid #D8C8B2; white-space: nowrap;
-  transition: box-shadow .2s ease, transform .2s ease; }
-a.cq-google:hover { box-shadow: 0 4px 14px rgba(42,23,34,.25); transform: translateY(-1px); }
-a.cq-google:focus-visible { outline: 3px solid #D9A956; outline-offset: 3px; }
-.cq-google .cq-g { width: 18px; height: 18px; flex: none; }
-.cq-t-note { font-size: .78rem; color: #8A7480; line-height: 1.35; max-width: 11rem; }
-.cq-door-link { font-size: .95rem; }
+.cq-t-fact b { font-family: var(--sign); font-weight: 700; font-size: 1.2rem; color: #2A1722; white-space: nowrap; }
+.st-key-ticket_stub { align-items: center; justify-content: center; gap: .85rem; padding: 1.45rem 1.1rem;
+  text-align: center; min-width: 0; transition: transform .25s ease; transform-origin: left center; }
+.st-key-ticket:hover .st-key-ticket_stub { transform: rotate(2.5deg) translateX(3px); }
+.st-key-ticket_stub [data-testid="stElementContainer"] { width: auto !important; }
+.cq-t-tear { font-family: var(--sign); font-size: .8rem; font-weight: 700; letter-spacing: .14em; color: #8A7480; }
+.cq-t-note { font-size: .98rem; color: #75606C; line-height: 1.4; max-width: 14.5rem; margin: 0 auto; }
+
+/* the Google button: a real st.button dressed as Google's white sign-in pill */
+.st-key-google button {
+  display: inline-flex; align-items: center; gap: .65rem; min-height: 0; width: auto;
+  background: #fff !important; color: #1f1f1f !important; border: 1px solid #D8C8B2 !important;
+  border-radius: 999px !important; padding: .66rem 1.1rem .66rem .95rem !important; box-shadow: none !important;
+  white-space: nowrap; transition: box-shadow .2s ease, transform .2s ease !important; }
+.st-key-google button::before { content: ""; width: 22px; height: 22px; flex: none;
+  background: url("__G__") center / contain no-repeat; }
+.st-key-google button p { color: #1f1f1f !important; font-family: Roboto, Arial, sans-serif !important;
+  font-size: 1.1rem !important; font-weight: 500 !important; }
+.st-key-google button:hover { background: #fff !important; border-color: #D8C8B2 !important;
+  box-shadow: 0 4px 14px rgba(42,23,34,.25) !important; transform: translateY(-1px); }
+.st-key-google button:active { transform: scale(.96) !important; background: #F1ECE6 !important;
+  box-shadow: 0 1px 3px rgba(42,23,34,.25) !important; transition-duration: 0s !important; }
+.st-key-google button:focus-visible { outline: 3px solid #D9A956 !important; outline-offset: 3px; }
+.cq-door-link { font-size: .95rem; text-align: center; }
 .cq-door-link a { color: var(--usher) !important; }
 .cq-door-link a:hover { color: var(--light) !important; }
 
 @media (max-width: 640px) {
-  .cq-ticket { --cut: 100%; flex-direction: column; -webkit-mask: none; mask: none; }
-  .cq-t-main { border-right: 0; border-bottom: 2px dashed #B9A78F; }
-  .cq-t-name { font-size: 2.8rem; }
-  .cq-t-facts { gap: .6rem 1.2rem; }
-  .cq-ticket:hover .cq-t-stub { transform: none; }
+  .st-key-ticket { --cut: 100%; -webkit-mask: none; mask: none; }
+  .st-key-ticket [data-testid="stColumn"]:first-child { border-right: 0; border-bottom: 2px dashed #B9A78F; }
+  .st-key-ticket { border-radius: 10px; }
+  .cq-t-main { padding: 1.4rem 1.3rem 1.2rem; }
+  .cq-t-admit { font-size: .72rem; }
+  .cq-t-name { font-size: 2.8rem; margin: .35rem 0 .4rem; }
+  .cq-t-line { font-size: 1.3rem; margin: 0 0 1.2rem; }
+  .cq-t-facts { gap: .6rem 1.2rem; padding-top: .8rem; }
+  .cq-t-fact span, .cq-t-tear { font-size: .66rem; }
+  .cq-t-fact b { font-size: 1rem; }
+  .st-key-ticket_stub { gap: .7rem; padding: 1.2rem .9rem; }
+  .cq-t-note { font-size: .82rem; max-width: 12rem; }
+  .st-key-google button { gap: .55rem; padding: .55rem .9rem .55rem .8rem !important; }
+  .st-key-google button::before { width: 18px; height: 18px; }
+  .st-key-google button p { font-size: .92rem !important; }
+  .st-key-ticket:hover .st-key-ticket_stub { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cq-ticket { animation: none; }
-  .cq-t-stub, a.cq-google { transition: none; }
+  .st-key-ticket { animation: none; }
+  .st-key-ticket_stub, .st-key-google button { transition: none !important; }
 }
 </style>
-"""
+""".replace("__G__", GOOGLE_G_URI)
 
-_G_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
-            '<path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/>'
-            '<path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/>'
-            '<path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.6 10.7l7.9-6.1z"/>'
-            '<path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.2-13.5-10l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>')
-# st.html strips inline <svg>, so the Google "G" goes in as an image
-GOOGLE_G = ('<img class="cq-g" alt="" src="data:image/svg+xml,'
-            + __import__("urllib.parse", fromlist=["quote"]).quote(_G_SVG, safe="") + '">')
+TICKET_NOTE = "Your ratings stay with your Google account, on every device."
+DOOR_LINK = ('<div class="cq-door-link"><a href="https://rayanasad109.github.io/Critiq/" target="_blank" '
+             'rel="noopener">New here? See what Critiq does</a></div>')
 
 
-def signin_html(posters: list[str], date_label: str, seat: str, href: str,
-                invited: bool = False) -> str:
-    """The logged-out page. `posters` are image URLs for the wall (may be empty)."""
-    wall = poster_wall_html(posters)
+def signin_wall_html(posters: list[str]) -> str:
+    """Behind the ticket: this week's posters drifting, shaded toward the middle."""
+    return f'{poster_wall_html(posters)}<div class="cq-wall-shade"></div>'
+
+
+def ticket_main_html(date_label: str, seat: str, invited: bool = False) -> str:
+    """The big part of the ticket (the stub with the Google button is Streamlit, in app.py)."""
     show = "Movie night for two" if invited else "Your next watch"
-    line = ("You've been invited. Sign in and Critiq finds something you'll both enjoy."
+    line = ("You've been invited. Sign in, then open your invite link again."
             if invited else "Write it down. We'll take it from there.")
-    return (
-        f'{wall}<div class="cq-wall-shade"></div>'
-        '<div class="cq-door"><div class="cq-ticket" role="group" aria-label="Critiq admission ticket">'
-        '<div class="cq-t-main"><div class="cq-t-admit">ADMIT ONE</div>'
-        '<div class="cq-t-name">CRITIQ</div>'
-        f'<p class="cq-t-line">{escape(line)}</p>'
-        '<div class="cq-t-facts">'
-        f'<div class="cq-t-fact"><span>DATE</span><b>{escape(date_label)}</b></div>'
-        f'<div class="cq-t-fact"><span>SHOWING</span><b>{escape(show)}</b></div>'
-        f'<div class="cq-t-fact"><span>SEAT</span><b>{escape(seat)}</b></div>'
-        '</div></div>'
-        '<div class="cq-t-stub"><div class="cq-t-tear">TEAR HERE</div>'
-        f'<a class="cq-google" href="{escape(href)}" target="_self">{GOOGLE_G}Sign in with Google</a>'
-        '<div class="cq-t-note">Your ratings stay with your Google account, on every device.</div>'
-        '</div></div>'
-        '<div class="cq-door-link"><a href="https://rayanasad109.github.io/Critiq/" target="_blank" '
-        'rel="noopener">New here? See what Critiq does</a></div></div>'
-    )
+    return ('<div class="cq-t-main" role="group" aria-label="Critiq admission ticket">'
+            '<div class="cq-t-admit">ADMIT ONE</div><div class="cq-t-name">CRITIQ</div>'
+            f'<p class="cq-t-line">{escape(line)}</p><div class="cq-t-facts">'
+            f'<div class="cq-t-fact"><span>DATE</span><b>{escape(date_label)}</b></div>'
+            f'<div class="cq-t-fact"><span>SHOWING</span><b>{escape(show)}</b></div>'
+            f'<div class="cq-t-fact"><span>SEAT</span><b>{escape(seat)}</b></div></div></div>')

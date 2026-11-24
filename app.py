@@ -16,6 +16,25 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 
+# Timing log: set CRITIQ_TIMING=1 and each run prints where its time went, e.g.
+#   [critiq] run Home: auth 2ms, db 140ms, header 3ms, home data 380ms, render 25ms = 550ms
+TIMING = bool(os.environ.get("CRITIQ_TIMING"))
+_RUN = {"t0": time.perf_counter(), "last": time.perf_counter(), "parts": []}
+
+
+def mark(label: str):
+    """Close the current timing segment under `label`."""
+    if TIMING:
+        now = time.perf_counter()
+        _RUN["parts"].append(f"{label} {1000 * (now - _RUN['last']):.0f}ms")
+        _RUN["last"] = now
+
+
+def report(what: str):
+    if TIMING:
+        total = 1000 * (time.perf_counter() - _RUN["t0"])
+        print(f"[critiq] {what}: {', '.join(_RUN['parts'])} = {total:.0f}ms", flush=True)
+
 import letterboxd
 import ui
 from blend import blend
@@ -130,6 +149,82 @@ def get_store() -> Store:
     return Store(get_secret("DATABASE_URL") or None)
 
 
+# Per-user database reads, cached by user so a click doesn't wait on the database.
+# Every write through CachedStore clears that user's entries; the TTL is only a backstop.
+USER_TTL = 600
+
+
+@st.cache_data(ttl=USER_TTL, show_spinner=False)
+def read_watched(user_id: str) -> list[dict]:
+    return get_store().get_watched(user_id)
+
+
+@st.cache_data(ttl=USER_TTL, show_spinner=False)
+def read_watchlist(user_id: str) -> list[dict]:
+    return get_store().get_watchlist(user_id)
+
+
+@st.cache_data(ttl=USER_TTL, show_spinner=False)
+def read_prefs(user_id: str) -> dict:
+    return get_store().get_prefs(user_id)
+
+
+@st.cache_data(ttl=USER_TTL, show_spinner=False)
+def read_share_token(user_id: str, display_name: str) -> str:
+    return get_store().share_token(user_id, display_name)
+
+
+@st.cache_data(ttl=USER_TTL, show_spinner=False)
+def read_user_by_token(token: str) -> tuple[str, str] | None:
+    return get_store().user_by_token(token)
+
+
+def forget_user(user_id: str):
+    for read in (read_watched, read_watchlist, read_prefs):
+        read.clear(user_id)
+
+
+class CachedStore:
+    """The Store with cached per-user reads. Writes go straight to the database and then
+    clear that user's cached reads, so the next read is fresh."""
+    WRITES = {"upsert_rating", "delete_rating", "save_prefs", "add_to_watchlist",
+              "remove_from_watchlist", "import_user"}
+
+    def __init__(self, store: Store):
+        self._store = store
+
+    def get_watched(self, user_id: str) -> list[dict]:
+        return read_watched(user_id)
+
+    def get_watchlist(self, user_id: str) -> list[dict]:
+        return read_watchlist(user_id)
+
+    def get_prefs(self, user_id: str) -> dict:
+        return read_prefs(user_id)
+
+    def share_token(self, user_id: str, display_name: str = "") -> str:
+        return read_share_token(user_id, display_name)
+
+    def user_by_token(self, token: str) -> tuple[str, str] | None:
+        return read_user_by_token(token)
+
+    def export_user(self, user_id: str) -> dict:          # same shape as Store.export_user
+        return {"watched": read_watched(user_id), "prefs": read_prefs(user_id),
+                "watchlist": read_watchlist(user_id)}
+
+    def __getattr__(self, name: str):
+        attr = getattr(self._store, name)
+        if name not in self.WRITES:
+            return attr
+
+        def write(user_id: str, *args, **kwargs):
+            try:
+                return attr(user_id, *args, **kwargs)
+            finally:
+                forget_user(user_id)
+        return write
+
+
 @st.cache_data(ttl=12 * 3600, show_spinner=False)
 def signin_posters(key: str) -> list[str]:
     """Poster URLs for the sign-in wall: this week's trending titles."""
@@ -158,31 +253,48 @@ def rows(items: list, n: int):
 
 
 # ------------------------------------------------------------------ routing
-# The URL is the source of truth so poster links, refresh, invite links and the
-# browser's back button all work:  ?page=Discover&title=movie:329865
+# Clicks navigate inside the session (no page reload): the page and the open title live
+# in session_state. The URL is kept in step so a link can still be shared or refreshed:
+#   ?page=Discover&title=movie:329865      (and ?page=Movie night&with=<invite> for invites)
 qp = st.query_params
 if "page" not in st.session_state:
     st.session_state.page = qp.get("page") if qp.get("page") in PAGES else "Home"
+if "details" not in st.session_state:
+    st.session_state.details = qp.get("title") or None
 for field in ("q", "dq"):
     if field not in st.session_state:
         st.session_state[field] = qp.get(field, "")
+# a click inside a fragment that changes page asks for one full run; this is that run
+st.session_state.pop("nav_pending", None)
 
 
-def link(key: str) -> str:
-    """URL for a title's details page, remembering where you came from."""
-    params = {"page": st.session_state.page, "title": key}
-    if st.session_state.page == "Rate" and st.session_state.q:
-        params["q"] = st.session_state.q
-    if st.session_state.page == "Discover" and st.session_state.dq:
-        params["dq"] = st.session_state.dq
-    if st.session_state.page == "Movie night" and qp.get("with"):
-        params["with"] = qp["with"]
-    return "?" + urlencode(params)
+def slug(key: str) -> str:
+    """A title key ("movie:329865") made safe for a widget key / CSS class."""
+    return key.replace(":", "_")
+
+
+def open_title(key: str):
+    """Show a title's details page (a button callback)."""
+    st.session_state.details = key
+    st.query_params["page"] = st.session_state.page
+    st.query_params["title"] = key
+    st.session_state.nav_pending = True
+
+
+def leave_fragment_if_navigating():
+    """Call first in a fragment that holds navigation buttons: a click there reruns only
+    the fragment, so hand over to a full run of the app."""
+    if st.session_state.get("nav_pending"):
+        st.rerun(scope="app")
 
 
 def on_page_change():
+    st.session_state.details = None
+    with_token = qp.get("with")
     st.query_params.clear()
     st.query_params["page"] = st.session_state.page
+    if with_token and st.session_state.page == "Movie night":
+        st.query_params["with"] = with_token
 
 
 def on_search_change(field: str = "q"):
@@ -193,11 +305,13 @@ def on_search_change(field: str = "q"):
 
 
 def close_details():
+    st.session_state.details = None
     st.query_params.pop("title", None)
 
 
 def go_to(page_name: str, autorun: bool = False):
     st.session_state.page = page_name
+    st.session_state.details = None
     st.query_params.clear()
     st.query_params["page"] = page_name
     if autorun:
@@ -218,21 +332,38 @@ def part_of_day() -> str:
 
 
 # ------------------------------------------------------------------- login
+def start_login():
+    """The ticket's Google button. Only this click opens Google. Google always comes back
+    to the bare app URL, so an invite link has to be opened again after signing in (the
+    ticket says so); once signed in, invite links open Movie night directly."""
+    st.login()
+
+
+def signin_page():
+    """The logged-out page: a cinema ticket over a wall of this week's posters. The ticket
+    is Streamlit layout (columns in a keyed container) so its Google button is a real button."""
+    today = date.today()
+    invited = bool(qp.get("with"))
+    st.session_state.saw_signin = True      # fallback for the stamp when there is no iat claim
+    st.html(ui.SIGNIN_CSS + ui.signin_wall_html(signin_posters(get_secret("TMDB_API_KEY"))))
+    with st.container(key="door"):
+        with st.container(key="ticket"):
+            main, stub = st.columns([63, 37], gap=None)
+            with main:
+                st.html(ui.ticket_main_html(today.strftime("%a %d %b"), ui.ticket_seat(today), invited))
+            with stub:
+                with st.container(key="ticket_stub"):
+                    st.html('<div class="cq-t-tear">TEAR HERE</div>')
+                    st.button("Sign in with Google", key="google", on_click=start_login)
+                    st.html(f'<div class="cq-t-note">{ui.TICKET_NOTE}</div>')
+        st.html(ui.DOOR_LINK)
+    st.html(ui.FOOTER)
+
+
 if auth_configured():
-    if not st.user.is_logged_in and qp.get("signin"):
-        st.login()             # the ticket (or the landing page) links here: go straight to Google
     if not st.user.is_logged_in:
-        st.html(ui.SIGNIN_CSS)
-        today = date.today()
-        seat = ui.ticket_seat(today)
-        st.session_state.saw_signin = True      # fallback for the stamp when there is no iat claim
-        href = "?" + urlencode({"with": qp["with"], "signin": 1} if qp.get("with") else {"signin": 1})
-        st.html(ui.signin_html(signin_posters(get_secret("TMDB_API_KEY")),
-                               today.strftime("%a %d %b"), seat, href, invited=bool(qp.get("with"))))
-        st.html(ui.FOOTER)
+        signin_page()
         st.stop()
-    if "signin" in qp:
-        del qp["signin"]
     user_id = st.user.email
     user_label = st.user.get("name") or user_id
     if just_signed_in():
@@ -242,12 +373,14 @@ else:
     user_id = "local"          # no login configured: single-user mode on your own machine
     user_label = None
 
-store = get_store()
+mark("setup+auth")
+store = CachedStore(get_store())
 watched = store.get_watched(user_id)
 watched_by_key = {w["title"]["key"]: w for w in watched}
 watchlist = store.get_watchlist(user_id)
 saved_keys = {w["title"]["key"] for w in watchlist}
 prefs = store.get_prefs(user_id)
+mark("db reads")
 
 api_key = get_secret("TMDB_API_KEY") or st.session_state.get("api_key", "")
 try:
@@ -330,7 +463,9 @@ def letterboxd_dialog():
 # ------------------------------------------------------------------ header
 head_l, head_r = st.columns([5, 1], vertical_alignment="center")
 with head_l:
-    st.html(ui.header_html())
+    with st.container(key="brand"):
+        st.html(ui.header_html())
+        st.button("Critiq home", key="brand_open", on_click=go_to, args=("Home",))
 with head_r:
     with st.popover(user_label.split()[0] if user_label else "Account", icon=":material/person:",
                     width="stretch"):
@@ -362,8 +497,15 @@ if not tmdb:
         st.rerun()
     st.stop()
 
-if "flash" in st.session_state:
-    st.toast(st.session_state.pop("flash"), icon=":material/check:")
+mark("header")
+
+
+def show_flash():
+    if "flash" in st.session_state:
+        st.toast(st.session_state.pop("flash"), icon=":material/check:")
+
+
+show_flash()
 
 
 # ------------------------------------------------------------ rating dialog
@@ -403,6 +545,7 @@ def rate_dialog(media_type: str, tmdb_id: int):
 def remove_rating(key: str, title: str):
     store.delete_rating(user_id, key)
     st.session_state.flash = f"Removed {title} from your library"
+    st.session_state.nav_pending = True       # the whole page changes: leave any fragment
 
 
 def rating_actions(t: dict, where: str):
@@ -420,17 +563,22 @@ def rating_actions(t: dict, where: str):
 
 # ----------------------------------------------------------------- watchlist
 def toggle_saved(media_type: str, tmdb_id: int):
+    """Save / unsave. Runs before a fragment-only rerun, so it also keeps `saved_keys`
+    (which that rerun still reads) in step with the database."""
     key = f"{media_type}:{tmdb_id}"
     if key in saved_keys:
         store.remove_from_watchlist(user_id, key)
+        saved_keys.discard(key)
         st.session_state.flash = "Removed from your watchlist"
     else:
         t = tmdb.details(media_type, tmdb_id)
         store.add_to_watchlist(user_id, t)
+        saved_keys.add(key)
         st.session_state.flash = f"Saved {t['title']} for later"
 
 
 def save_button(t: dict, where: str, label: bool = False, stretch: bool | None = None):
+    """Save-for-later toggle. Call it inside a fragment so a click reruns only that part."""
     saved = t["key"] in saved_keys
     st.button(("Saved" if saved else "Save for later") if label else "",
               key=f"save-{where}-{t['key']}",
@@ -438,6 +586,38 @@ def save_button(t: dict, where: str, label: bool = False, stretch: bool | None =
               help="Remove from watchlist" if saved else "Save for later",
               type="secondary", width="stretch" if (label if stretch is None else stretch) else "content",
               on_click=toggle_saved, args=(t["media_type"], t["id"]))
+
+
+@st.fragment
+def save_only(t: dict, where: str, label: bool = False, stretch: bool | None = None):
+    """A save button on its own, rerunning by itself when clicked."""
+    show_flash()
+    save_button(t, where, label=label, stretch=stretch)
+
+
+# ----------------------------------------------------------- posters & strips
+def poster(t: dict, where: str, **card):
+    """A poster card that opens the title's details in this session (no page reload).
+    The card is HTML; a real button, invisible, lies over the poster image."""
+    key = t["key"]
+    with st.container(key=f"pc-{where}-{slug(key)}"):
+        st.html(ui.poster_card(t, **card))
+        st.button(f"Details for {t.get('title', 'this title')}", key=f"poster-{where}-{slug(key)}",
+                  on_click=open_title, args=(key,))
+
+
+STRIP_MAX = 16          # posters per strip: each one is a few widgets, so keep rows short
+
+
+def strip(title: str, items: list[dict], where: str):
+    """A horizontal film strip of posters, each opening its details in this session."""
+    st.html(f'<h3 class="cq-strip-title">{ui.escape(title)}</h3>')
+    with st.container(key=f"strip-{where}", horizontal=True, gap=None):
+        for t in items[:STRIP_MAX]:
+            with st.container(key=f"si-{where}-{slug(t['key'])}", width=180):   # CSS narrows it on tablets/phones
+                st.html(ui.strip_item_html(t))
+                st.button(f"Details for {t['title']}", key=f"poster-{where}-{slug(t['key'])}",
+                          on_click=open_title, args=(t["key"],))
 
 
 # --------------------------------------------------------------- skeletons
@@ -454,16 +634,29 @@ def load_into(stage, layout: str, work):
 
 
 # --------------------------------------------------------------- spin the reel
+def spin(n_titles: int, weights: list[float]):
+    st.session_state.reel = (random.choices(range(n_titles), weights=[max(w, 0.01) for w in weights])[0],
+                             f"{random.randrange(16 ** 6):06x}")
+
+
 @st.dialog("Spin the reel", width="small")
 def spin_dialog(titles: list[dict], weights: list[float]):
-    winner = random.choices(range(len(titles)), weights=[max(w, 0.01) for w in weights])[0]
-    spin_id = f"{random.randrange(16 ** 6):06x}"
-    st.html(ui.reel_html(titles, winner, link(titles[winner]["key"]), spin_id))
-    st.button("Spin again", icon=":material/casino:", width="stretch")   # reruns the dialog
+    if "reel" not in st.session_state:
+        spin(len(titles), weights)
+    winner, spin_id = st.session_state.reel
+    st.html(ui.reel_html(titles, winner, spin_id))
+    again, details = st.columns(2)
+    again.button("Spin again", icon=":material/casino:", width="stretch",
+                 on_click=spin, args=(len(titles), weights))
+    if details.button("See details", type="primary", width="stretch", key="reel_details"):
+        st.session_state.pop("reel", None)
+        open_title(titles[winner]["key"])
+        st.rerun()
 
 
 def spin_button(titles: list[dict], weights: list[float], key: str):
     if len(titles) >= 2 and st.button("Can't decide? Spin the reel", icon=":material/casino:", key=key):
+        st.session_state.pop("reel", None)
         spin_dialog(titles, weights)
 
 
@@ -511,13 +704,11 @@ def card_meta(t: dict) -> str:
 
 
 # ---------------------------------------------------------------- navigation
-counts = {p: "" for p in PAGES}
-counts["Library"] = f"  {len(watched)}"
 icons = {"Home": ":material/home:", "Rate": ":material/star:", "Library": ":material/movie:",
          "Discover": ":material/explore:", "Movie night": ":material/group:"}
 with st.container(key="nav"):
     page = st.pills("Section", PAGES, key="page", required=True, on_change=on_page_change,
-                    format_func=lambda p: f"{icons[p]} {p}{counts[p]}",
+                    format_func=lambda p: f"{icons[p]} {p}",   # no counts: they live in the Library headings
                     label_visibility="collapsed")
 st.write("")
 
@@ -552,23 +743,7 @@ def details_page(key: str):
         st.caption(omdb_problem)
     mine = watched_by_key.get(t["key"])
     rec = next((r for r in rec_memory().get(user_id, []) if r.title["key"] == t["key"]), None)
-
-    # actions sit right under the screen
-    with st.container(horizontal=True, vertical_alignment="center"):
-        if mine:
-            st.html(ui.score_html(mine["rating"]), width="content")
-            if st.button("Edit rating", icon=":material/edit:"):
-                rate_dialog(media_type, int(tmdb_id))
-            with st.popover("Remove rating", icon=":material/delete:", type="tertiary"):
-                st.markdown(f"Remove **{t['title']}** and your review?")
-                st.button("Remove", type="primary", on_click=remove_rating, args=(t["key"], t["title"]))
-        else:
-            if st.button("I've seen it, rate it", type="primary", icon=":material/star:"):
-                rate_dialog(media_type, int(tmdb_id))
-            save_button(t, "details", label=True, stretch=False)
-        if t.get("trailer"):
-            st.link_button("Watch the trailer", f"https://www.youtube.com/watch?v={t['trailer']}",
-                           icon=":material/play_arrow:")
+    details_actions(t)       # right under the screen
     st.write("")
 
     main, side = st.columns([2.3, 1], gap="large")
@@ -617,12 +792,39 @@ def details_page(key: str):
         for chunk, cols in rows(similar, GRID):
             for s, col in zip(chunk, cols):
                 with col:
-                    st.html(ui.poster_card(s, href=link(s["key"])))
+                    poster(s, "sim")
 
 
-if qp.get("title"):
-    details_page(qp["title"])
+@st.fragment
+def details_actions(t: dict):
+    """Rate / save / trailer under the details screen. Saving reruns only this part;
+    removing a rating needs the whole page, so it asks for a full run."""
+    leave_fragment_if_navigating()
+    show_flash()
+    media_type, tmdb_id = t["media_type"], t["id"]
+    mine = watched_by_key.get(t["key"])
+    with st.container(horizontal=True, vertical_alignment="center"):
+        if mine:
+            st.html(ui.score_html(mine["rating"]), width="content")
+            if st.button("Edit rating", icon=":material/edit:"):
+                rate_dialog(media_type, int(tmdb_id))
+            with st.popover("Remove rating", icon=":material/delete:", type="tertiary"):
+                st.markdown(f"Remove **{t['title']}** and your review?")
+                st.button("Remove", type="primary", on_click=remove_rating, args=(t["key"], t["title"]))
+        else:
+            if st.button("I've seen it, rate it", type="primary", icon=":material/star:"):
+                rate_dialog(media_type, int(tmdb_id))
+            save_button(t, "details", label=True, stretch=False)
+        if t.get("trailer"):
+            st.link_button("Watch the trailer", f"https://www.youtube.com/watch?v={t['trailer']}",
+                           icon=":material/play_arrow:")
+
+
+if st.session_state.details:
+    details_page(st.session_state.details)
     footer()
+    mark("details")
+    report(f"run details {st.session_state.details}")
     st.stop()
 
 
@@ -666,6 +868,42 @@ def next_feature(n: int):
     st.session_state.feature_idx = (st.session_state.get("feature_idx", 0) + 1) % max(n, 1)
 
 
+def feature_for(entry: tuple) -> tuple:
+    """(title with full details, label, why, fact lines) for one of the home features."""
+    base, label, why, match = entry
+    t = {**base, **safe(lambda: tmdb.full_details(base["media_type"], base["id"]), {})}
+    for k in ("imdb", "rt"):                       # keep scores already looked up
+        if base.get(k) is not None:
+            t[k] = base[k]
+    facts = [", ".join(x for x in [t.get("year", ""), ui.kind(t), t.get("runtime", "")] if x),
+             ", ".join(ui.score_bits(t) + ([match] if match else []))]
+    return t, label, why, facts
+
+
+@st.fragment
+def feature_block(features: list, when: str, ready: tuple | None):
+    """Tonight's feature and its buttons. "Not tonight" and saving rerun only this block;
+    the screen itself is a button that opens the title's details."""
+    leave_fragment_if_navigating()
+    show_flash()
+    idx = st.session_state.get("feature_idx", 0) % len(features)
+    if ready and ready[0]["key"] == features[idx][0]["key"]:
+        t, label, why, facts = ready
+    else:
+        t, label, why, facts = feature_for(features[idx])
+    with st.container(key="feature_screen"):
+        st.html(ui.feature_html(t, when, label, facts, why))
+        st.button(f"Details for {t['title']}", key="feature_open", on_click=open_title, args=(t["key"],))
+    with st.container(key="feature_actions", horizontal=True, gap="small"):
+        if t.get("trailer"):
+            st.link_button("Watch the trailer", f"https://www.youtube.com/watch?v={t['trailer']}",
+                           icon=":material/play_arrow:", type="primary")
+        save_button(t, "feature", label=True, stretch=False)
+        if len(features) > 1:
+            st.button("Not tonight", icon=":material/skip_next:", on_click=next_feature,
+                      args=(len(features),), help="Show the next pick")
+
+
 @st.cache_data(ttl=7 * 86400, show_spinner=False)
 def vs_imdb(pairs: tuple) -> float | None:
     """Average gap between your stars and IMDb (/2) over up to 40 recent ratings."""
@@ -701,14 +939,7 @@ if page == "Home":
         d["feature"] = None
         if d["features"]:
             idx = st.session_state.get("feature_idx", 0) % len(d["features"])
-            base, label, why, match = d["features"][idx]
-            t = {**base, **safe(lambda: tmdb.full_details(base["media_type"], base["id"]), {})}
-            for k in ("imdb", "rt"):                       # keep scores already looked up
-                if base.get(k) is not None:
-                    t[k] = base[k]
-            facts = [", ".join(x for x in [t.get("year", ""), ui.kind(t), t.get("runtime", "")] if x),
-                     ", ".join(ui.score_bits(t) + ([match] if match else []))]
-            d["feature"] = (t, label, why, facts)
+            d["feature"] = feature_for(d["features"][idx])
         d["fav"], d["more"] = None, []
         if watched:
             d["fav"] = max(watched, key=lambda w: (w["rating"], w.get("updated_at", "")))
@@ -726,22 +957,13 @@ if page == "Home":
         home = load_into(stage, "home", home_data)
     else:
         home = home_data()
+    mark("home data")
     trending = home["trending"]
 
     with stage.container():
         # ---------- tonight's feature ----------
         if home["feature"]:
-            t, label, why, facts = home["feature"]
-            ambient(t)
-            st.html(ui.feature_html(t, when, label, facts, why, link(t["key"])))
-            with st.container(key="feature_actions", horizontal=True, gap="small"):
-                if t.get("trailer"):
-                    st.link_button("Watch the trailer", f"https://www.youtube.com/watch?v={t['trailer']}",
-                                   icon=":material/play_arrow:", type="primary")
-                save_button(t, "feature", label=True, stretch=False)
-                if len(home["features"]) > 1:
-                    st.button("Not tonight", icon=":material/skip_next:", on_click=next_feature,
-                              args=(len(home["features"]),), help="Show the next pick")
+            feature_block(home["features"], when, home["feature"])
         else:
             st.html(ui.home_html(when, len(watched)))
 
@@ -762,23 +984,24 @@ if page == "Home":
 
         # ---------- film strips ----------
         if watchlist:
-            st.html(ui.strip_html("Your watchlist", [w["title"] for w in watchlist[:24]], link))
+            strip("Your watchlist", [w["title"] for w in watchlist], "wl")
         if home["more"]:
-            st.html(ui.strip_html(f"Because you loved {home['fav']['title']['title']}", home["more"], link))
+            strip(f"Because you loved {home['fav']['title']['title']}", home["more"], "more")
         if home["fresh"]:
             services = home["services"]
             names = " & ".join(services[:2]) + (" and more" if len(services) > 2 else "")
-            st.html(ui.strip_html(f"New on {names}", home["fresh"], link))
+            strip(f"New on {names}", home["fresh"], "fresh")
         if trending:
-            st.html(ui.strip_html("Trending this week", trending, link))
+            strip("Trending this week", trending, "trend")
         last = [r.title for r in rec_memory().get(user_id, []) if r.title["key"] not in watched_by_key]
         if last:
-            st.html(ui.strip_html("From your last search", last, link))
+            strip("From your last search", last, "last")
         if not watched and not watchlist:
             st.write("")
             st.caption("New here? Rate three to five things you've watched, or bring your history over "
                        "from Letterboxd in the Account menu.")
     st.session_state.home_drawn = True
+    mark("home render")
 
 # ===================================================================== RATE
 if page in ("Rate", "Library"):
@@ -805,7 +1028,7 @@ if page == "Rate":
                 key = f"{r['media_type']}:{r['id']}"
                 mine = watched_by_key.get(key)
                 with col:
-                    st.html(ui.poster_card(r, stub=mine["rating"] if mine else None, href=link(key)))
+                    poster({**r, "key": key}, "rate", stub=mine["rating"] if mine else None)
                     if st.button("Edit rating" if mine else "Rate", key=f"rate-{key}",
                                  type="tertiary" if mine else "secondary", width="stretch"):
                         rate_dialog(r["media_type"], r["id"])
@@ -821,30 +1044,38 @@ if page == "Rate":
             for chunk, cols in rows(recent, GRID):
                 for w, col in zip(chunk, cols):
                     with col:
-                        st.html(ui.poster_card(w["title"], stub=w["rating"], review=w["review"],
-                                               href=link(w["title"]["key"]), even=True))
+                        poster(w["title"], "recent", stub=w["rating"], review=w["review"], even=True)
                         rating_actions(w["title"], "recent")
 
 # ================================================================== LIBRARY
-elif page == "Library":
+@st.fragment
+def watchlist_actions(t: dict):
+    """Under a watchlist card. Unsaving reruns only this; the card goes on the next visit."""
+    show_flash()
+    with st.container(horizontal=True, gap="small", wrap=False):
+        if st.button("Watched it", key=f"wl-rate-{t['key']}", width="stretch",
+                     help="Rate it, and it moves to your Rated shelf"):
+            rate_dialog(t["media_type"], t["id"])
+        save_button(t, "wl")
+
+
+if page == "Library":
     shelf = st.segmented_control("Shelf", ["Rated", "Watchlist"], default="Rated", required=True,
-                                 key="lib_shelf", label_visibility="collapsed",
-                                 format_func=lambda s: f"{s}  {len(watched) if s == 'Rated' else len(watchlist)}")
+                                 key="lib_shelf", label_visibility="collapsed")
     st.write("")
     if shelf == "Watchlist":
         if not watchlist:
             st.html(ui.empty_html("Nothing saved yet",
                                   "Hit “Save for later” on any title and it waits for you here."))
+        else:
+            st.markdown(f"#### {len(watchlist)} saved")      # matches "N rated" on the Rated shelf
+            st.write("")
         for chunk, cols in rows(watchlist, GRID):
             for w, col in zip(chunk, cols):
                 t = w["title"]
                 with col:
-                    st.html(ui.poster_card(t, href=link(t["key"])))
-                    with st.container(horizontal=True, gap="small", wrap=False):
-                        if st.button("Watched it", key=f"wl-rate-{t['key']}", width="stretch",
-                                     help="Rate it, and it moves to your Rated shelf"):
-                            rate_dialog(t["media_type"], t["id"])
-                        save_button(t, "wl")
+                    poster(t, "wlib")
+                    watchlist_actions(t)
     elif not watched:
         st.html(ui.empty_html("Your library is empty",
                               "Everything you rate lands here, with your review."))
@@ -874,8 +1105,7 @@ elif page == "Library":
             for w, col in zip(chunk, cols):
                 t = w["title"]
                 with col:
-                    st.html(ui.poster_card(t, stub=w["rating"], review=w["review"], even=True,
-                                           href=link(t["key"])))
+                    poster(t, "lib", stub=w["rating"], review=w["review"], even=True)
                     rating_actions(t, "lib")
 
 
@@ -896,19 +1126,25 @@ def rec_grid(recs, where: str, fit=None, friend_name: str = ""):
             t = r.title
             with col:
                 if fit:
-                    st.html(ui.poster_card(t, href=link(t["key"]), extra_meta=card_meta(t)))
+                    poster(t, where, extra_meta=card_meta(t))
                     st.html(ui.fit_html(*fit[t["key"]], friend_name))
                     st.html('<ul class="cq-reasons">' + "".join(
                         f"<li>{ui.escape(x)}</li>" for x in r.reasons) + "</ul>")
                 else:
                     pct = max(1, min(99, round(100 * r.score / top)))
-                    st.html(ui.poster_card(t, match=pct, reasons=r.reasons, href=link(t["key"]),
-                                           extra_meta=card_meta(t)))
-                with st.container(horizontal=True, gap="small", wrap=False):
-                    if st.button("Seen it? Rate it", key=f"seen-{where}-{t['key']}", width="stretch",
-                                 icon=":material/star:"):
-                        rate_dialog(t["media_type"], t["id"])
-                    save_button(t, where)
+                    poster(t, where, match=pct, reasons=r.reasons, extra_meta=card_meta(t))
+                rec_actions(t, where)
+
+
+@st.fragment
+def rec_actions(t: dict, where: str):
+    """Rate / save under a recommendation card; saving reruns only this row."""
+    show_flash()
+    with st.container(horizontal=True, gap="small", wrap=False):
+        if st.button("Seen it? Rate it", key=f"seen-{where}-{t['key']}", width="stretch",
+                     icon=":material/star:"):
+            rate_dialog(t["media_type"], t["id"])
+        save_button(t, where)
 
 
 if page == "Discover":
@@ -930,10 +1166,9 @@ if page == "Discover":
                 key = f"{r['media_type']}:{r['id']}"
                 mine = watched_by_key.get(key)
                 with col:
-                    st.html(ui.poster_card({**r, "key": key}, stub=mine["rating"] if mine else None,
-                                           href=link(key)))
+                    poster({**r, "key": key}, "search", stub=mine["rating"] if mine else None)
                     if not mine:
-                        save_button({**r, "key": key}, "search", label=True)
+                        save_only({**r, "key": key}, "search", label=True)
         st.write("")
         st.caption("Click a poster for the full details, ratings and where to watch.")
         st.divider()
@@ -1153,4 +1388,7 @@ if page == "Movie night":
                     spin_button([p.title for p in picks], [p.score for p in picks], "spin-night")
                     rec_grid(as_recs, "night", fit=fit, friend_name=friend_name)
 
+mark(f"page {page}")
 footer(wall=wall_posters([w["title"] for w in watched] + [w["title"] for w in watchlist], api_key))
+mark("footer")
+report(f"run {page}")
